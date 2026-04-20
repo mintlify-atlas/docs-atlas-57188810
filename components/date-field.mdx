@@ -1,0 +1,309 @@
+---
+title: Date Field — Accessible Segmented Date Input for Svelte 5
+description: A keyboard-driven, accessible alternative to the native date input for Svelte 5, with segment-by-segment editing and full validation support.
+---
+
+The `DateField` component is an accessible alternative to `<input type="date">`. Instead of a native browser picker, it renders individual editable segments — month, day, year, and optionally time — that users navigate with the keyboard. Each segment is independently focusable and cycles through valid values.
+
+Before using this component, read the [Dates guide](/dates) to understand `DateValue` types from `@internationalized/date`.
+
+## Installation
+
+The `DateField` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Structure
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+</script>
+
+<DateField.Root>
+  <DateField.Label>Check-in date</DateField.Label>
+  <DateField.Input>
+    {#snippet children({ segments })}
+      {#each segments as { part, value }}
+        <DateField.Segment {part}>
+          {value}
+        </DateField.Segment>
+      {/each}
+    {/snippet}
+  </DateField.Input>
+</DateField.Root>
+```
+
+## Reusable Component Pattern
+
+Build a reusable `MyDateField` wrapper to avoid repeating structure throughout your app:
+
+```svelte
+<!-- MyDateField.svelte -->
+<script lang="ts">
+  import { DateField, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    value = $bindable(),
+    placeholder = $bindable(),
+    labelText,
+    name,
+    ...restProps
+  }: WithoutChildrenOrChild<DateField.RootProps> & {
+    labelText: string;
+    name?: string;
+  } = $props();
+</script>
+
+<DateField.Root bind:value bind:placeholder {...restProps}>
+  <DateField.Label {name}>{labelText}</DateField.Label>
+  <DateField.Input>
+    {#snippet children({ segments })}
+      {#each segments as { part, value }}
+        <DateField.Segment {part}>
+          {value}
+        </DateField.Segment>
+      {/each}
+    {/snippet}
+  </DateField.Input>
+</DateField.Root>
+```
+
+## Segments
+
+Each segment in a `DateField` represents one discrete part of the date. Segments can be:
+
+- **Editable**: `year`, `month`, `day`, `hour`, `minute`, `second`, `dayPeriod`, `timeZoneName`
+- **Literal**: separator characters (e.g. `/`, `:`) that vary by `locale`
+
+Style literal segments differently to distinguish them from interactive ones.
+
+## Placeholder
+
+The `placeholder` prop is not the empty-state hint text — it's the initial `DateValue` used to seed the field's format and starting position when no value is present. Use it to enable time segments or timezone display:
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { CalendarDateTime, now } from "@internationalized/date";
+</script>
+
+<!-- Show date + time segments -->
+<DateField.Root placeholder={new CalendarDateTime(2024, 8, 3, 12, 30)}>
+  <!-- ... -->
+</DateField.Root>
+
+<!-- Show date + time + timezone segments -->
+<DateField.Root placeholder={now("America/New_York")}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+> **Leap year tip**: If collecting birthdays, set the placeholder year to a leap year (e.g. 2000) so users born on February 29 can select the correct date.
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myValue = $state(new CalendarDateTime(2024, 8, 3, 12, 30));
+</script>
+
+<button onclick={() => (myValue = myValue.add({ days: 1 }))}>Add 1 day</button>
+
+<DateField.Root bind:value={myValue}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  let myValue = $state<DateValue>();
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: DateValue | undefined) {
+    myValue = newValue;
+  }
+</script>
+
+<DateField.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+## Default Value from a String
+
+Parse ISO 8601 strings from APIs or databases using `@internationalized/date`:
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { parseDate, parseDateTime, parseZonedDateTime } from "@internationalized/date";
+
+  // CalendarDate from "YYYY-MM-DD"
+  let value = $state(parseDate("2024-08-03"));
+
+  // CalendarDateTime from "YYYY-MM-DDTHH:mm"
+  // let value = $state(parseDateTime("2024-08-03T12:30"));
+
+  // ZonedDateTime from "YYYY-MM-DDTHH:mm[Timezone]"
+  // let value = $state(parseZonedDateTime("2024-08-03T12:30[America/New_York]"));
+</script>
+
+<DateField.Root {value}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+## Granularity
+
+Control which time segments are rendered using the `granularity` prop:
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  const value = new CalendarDateTime(2024, 8, 2, 12, 30);
+</script>
+
+<!-- Renders: month / day / year / hour / minute / second -->
+<DateField.Root granularity="second" {value}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+| Value | Segments rendered |
+|-------|-------------------|
+| `"day"` | month, day, year |
+| `"hour"` | + hour |
+| `"minute"` | + minute (default for DateTime) |
+| `"second"` | + second |
+
+## Validation
+
+### Min/Max Values
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  const todayDate = today(getLocalTimeZone());
+</script>
+
+<!-- Invalid if date is before today -->
+<DateField.Root minValue={todayDate}>
+  <!-- ... -->
+</DateField.Root>
+
+<!-- Invalid if date is after today -->
+<DateField.Root maxValue={todayDate}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+### Custom Validation
+
+```svelte
+<script lang="ts">
+  import { DateField } from "bits-ui";
+  import { CalendarDate, type DateValue } from "@internationalized/date";
+
+  const value = new CalendarDate(2024, 8, 2);
+
+  function validate(date: DateValue) {
+    return date.day === 1 ? "Date cannot be the first day of the month" : undefined;
+  }
+
+  function onInvalid(reason: "min" | "max" | "custom", msg?: string | string[]) {
+    if (reason === "custom") {
+      console.error(msg);
+    } else if (reason === "min") {
+      console.error("Date is too early.");
+    } else if (reason === "max") {
+      console.error("Date is too late.");
+    }
+  }
+</script>
+
+<DateField.Root {validate} {value} {onInvalid}>
+  <!-- ... -->
+</DateField.Root>
+```
+
+## Localization
+
+The field formats segments and separator literals according to the `locale` prop:
+
+```svelte
+<DateField.Root locale="de">
+  <!-- ... -->
+</DateField.Root>
+```
+
+## API Reference
+
+### DateField.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `DateValue` | `undefined` | The selected date. Bindable. |
+| `placeholder` | `DateValue` | current date | Determines field format and start position when empty. Bindable. |
+| `granularity` | `"day" \| "hour" \| "minute" \| "second"` | `"day"` | Controls which segments are rendered. |
+| `locale` | `string` | `'en'` | BCP 47 locale string. |
+| `hourCycle` | `12 \| 24` | locale default | 12 or 24-hour time display. |
+| `hideTimeZone` | `boolean` | `false` | Hides the timezone segment even when using `ZonedDateTime`. |
+| `minValue` | `DateValue` | `undefined` | Marks field invalid if value is before this date. |
+| `maxValue` | `DateValue` | `undefined` | Marks field invalid if value is after this date. |
+| `disabled` | `boolean` | `false` | Disables all interaction. |
+| `readonly` | `boolean` | `false` | Prevents editing segments. |
+| `readonlySegments` | `EditableSegmentPart[]` | `undefined` | Makes specific segments read-only. |
+| `required` | `boolean` | `false` | Marks the hidden form input as required. |
+| `validate` | `(value: DateValue) => string \| string[] \| undefined` | `undefined` | Custom validation function. |
+| `onInvalid` | `(reason, msg?) => void` | `undefined` | Called when the value is invalid. |
+| `errorMessageId` | `string` | `undefined` | ID of the element containing error messages. |
+| `onValueChange` | `(value: DateValue \| undefined) => void` | `undefined` | Called when the value changes. |
+| `onPlaceholderChange` | `(value: DateValue) => void` | `undefined` | Called when the placeholder changes. |
+
+### DateField.Label
+
+A `<div>` element associated with the field for accessibility. Clicking it focuses the first segment.
+
+### DateField.Input
+
+Container for the segments. Accepts a `name` prop to enable form submission via a hidden `<input>`.
+
+The `children` snippet receives:
+
+```typescript
+{ segments: Array<{ part: SegmentPart; value: string }> }
+```
+
+### DateField.Segment
+
+A `<span>` representing one segment. Requires the `part` prop (from the segments array).
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `part` | `SegmentPart` | The segment identifier (e.g. `"month"`, `"day"`, `"literal"`). |
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` types, parsing, and formatting
+- [Date Picker](/components/date-picker) — combines DateField with a calendar popover
+- [Date Range Field](/components/date-range-field) — two date fields for a range

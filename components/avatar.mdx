@@ -1,0 +1,162 @@
+---
+title: "Avatar: Image with Fallback for User Profiles"
+description: Displays a user or entity image with automatic loading-state detection and a configurable fallback shown when the image is slow or unavailable.
+---
+
+The Avatar component provides a resilient way to show user or entity images. It tracks image loading state internally and shows a fallback — initials, an icon, or any content — when the image is still loading or fails to load entirely.
+
+## Installation
+
+```typescript
+import { Avatar } from "bits-ui";
+```
+
+## Usage
+
+### Basic avatar
+
+```svelte
+<script lang="ts">
+  import { Avatar } from "bits-ui";
+</script>
+
+<Avatar.Root>
+  <Avatar.Image
+    src="https://github.com/huntabyte.png"
+    alt="Huntabyte's avatar"
+  />
+  <Avatar.Fallback>HB</Avatar.Fallback>
+</Avatar.Root>
+```
+
+### Reusable component
+
+Create a `UserAvatar.svelte` wrapper so that styling and structure stay consistent across your application.
+
+```svelte title="UserAvatar.svelte"
+<script lang="ts">
+  import { Avatar, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    src,
+    alt,
+    fallback,
+    ref = $bindable(null),
+    imageRef = $bindable(null),
+    fallbackRef = $bindable(null),
+    ...restProps
+  }: WithoutChildrenOrChild<Avatar.RootProps> & {
+    src: string;
+    alt: string;
+    fallback: string;
+    imageRef?: HTMLImageElement | null;
+    fallbackRef?: HTMLElement | null;
+  } = $props();
+</script>
+
+<Avatar.Root {...restProps} bind:ref>
+  <Avatar.Image {src} {alt} bind:ref={imageRef} />
+  <Avatar.Fallback bind:ref={fallbackRef}>
+    {fallback}
+  </Avatar.Fallback>
+</Avatar.Root>
+```
+
+Then use it with a list of users:
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import UserAvatar from "$lib/components/UserAvatar.svelte";
+
+  const users = [
+    { handle: "huntabyte", initials: "HJ" },
+    { handle: "pavelstianko", initials: "PS" },
+    { handle: "adriangonz97", initials: "AG" },
+  ];
+</script>
+
+{#each users as user}
+  <UserAvatar
+    src="https://github.com/{user.handle}.png"
+    alt="{user.handle}'s avatar"
+    fallback={user.initials}
+  />
+{/each}
+```
+
+### Skip the loading check
+
+When you are certain that an image will load — for example, a local asset bundled with your app — pass `loadingStatus="loaded"` to `Avatar.Root` to skip the loading phase and show the image immediately.
+
+```svelte
+<script lang="ts">
+  import { Avatar } from "bits-ui";
+  import localAvatar from "/avatar.png";
+</script>
+
+<Avatar.Root loadingStatus="loaded">
+  <Avatar.Image src={localAvatar} alt="User avatar" />
+  <Avatar.Fallback>HB</Avatar.Fallback>
+</Avatar.Root>
+```
+
+## API Reference
+
+### `Avatar.Root`
+
+The container element. Manages the shared loading state and exposes it to child components via context.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `delayMs` | `number` | `0` | Milliseconds to wait after the image loads before hiding the fallback. Useful to prevent flickering on fast connections. |
+| `loadingStatus` | `"loading" \| "loaded" \| "error"` | `"loading"` | Override the loading state. Set to `"loaded"` to skip the load check for guaranteed images. |
+| `onLoadingStatusChange` | `(status: "loading" \| "loaded" \| "error") => void` | — | Called whenever the loading status changes. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root `<div>` element. |
+| `children` | `Snippet` | — | Must include `Avatar.Image` and `Avatar.Fallback`. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-status` | `"loading"`, `"loaded"`, `"error"` |
+| `data-avatar-root` | Present on the root element. |
+
+### `Avatar.Image`
+
+Renders an `<img>` element. Hidden via `display: none` while loading; shown once the status is `"loaded"`. Accepts all standard `HTMLImageAttributes` including `src`, `alt`, `crossorigin`, and `referrerpolicy`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `src` | `string \| null \| undefined` | — | URL of the image to display. Setting this to `null` or `undefined` marks the status as `"error"`. |
+| `alt` | `string` | — | Accessible text description of the image (forwarded to the `<img>`). |
+| `ref` | `HTMLImageElement \| null` | `null` | Bindable reference to the `<img>` element. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-status` | Mirrors the root loading status. |
+| `data-avatar-image` | Present on the image element. |
+
+### `Avatar.Fallback`
+
+Renders a `<span>` element. Visible while the status is `"loading"` or `"error"`; hidden once the image is loaded.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ref` | `HTMLElement \| null` | `null` | Bindable reference to the `<span>` element. |
+| `children` | `Snippet` | — | Fallback content — typically initials or an icon. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-status` | Mirrors the root loading status. |
+| `data-avatar-fallback` | Present on the fallback element. |
+
+## Accessibility
+
+- Always provide a meaningful `alt` attribute on `Avatar.Image`. For decorative avatars where a nearby name makes the image redundant, use `alt=""`.
+- The fallback text (initials, etc.) is visible to screen readers when the image has not loaded, so keep it meaningful.
+- If the avatar is interactive (e.g., wrapped in a link), ensure the outer element carries appropriate `aria-label` text.

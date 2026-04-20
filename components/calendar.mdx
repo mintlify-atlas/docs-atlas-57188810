@@ -1,0 +1,371 @@
+---
+title: Calendar — Interactive Date Selection for Svelte 5
+description: A headless, accessible calendar component for Svelte 5 that supports single and multiple date selection, localization, and range constraints.
+---
+
+The `Calendar` component provides a fully accessible, headless date-picking interface rendered as a grid of days. It supports single and multiple date selection, locale-aware formatting, multi-month display, and min/max constraints — all without imposing any styles.
+
+Before using this component, read the [Dates guide](/dates) to understand how `DateValue` objects from `@internationalized/date` work in Bits UI.
+
+## Installation
+
+The `Calendar` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Usage
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  let value = $state(today(getLocalTimeZone()));
+</script>
+
+<Calendar.Root type="single" bind:value>
+  {#snippet children({ months, weekdays })}
+    <Calendar.Header>
+      <Calendar.PrevButton />
+      <Calendar.Heading />
+      <Calendar.NextButton />
+    </Calendar.Header>
+
+    {#each months as month}
+      <Calendar.Grid>
+        <Calendar.GridHead>
+          <Calendar.GridRow>
+            {#each weekdays as day}
+              <Calendar.HeadCell>{day}</Calendar.HeadCell>
+            {/each}
+          </Calendar.GridRow>
+        </Calendar.GridHead>
+        <Calendar.GridBody>
+          {#each month.weeks as weekDates}
+            <Calendar.GridRow>
+              {#each weekDates as date}
+                <Calendar.Cell {date} month={month.value}>
+                  <Calendar.Day />
+                </Calendar.Cell>
+              {/each}
+            </Calendar.GridRow>
+          {/each}
+        </Calendar.GridBody>
+      </Calendar.Grid>
+    {/each}
+  {/snippet}
+</Calendar.Root>
+```
+
+## Placeholder
+
+The `placeholder` prop controls which month is displayed when no date is selected. As the user navigates, the placeholder is updated to reflect the currently visible month. By default it is set to the nearest allowed date (respecting `minValue`/`maxValue`) of type `CalendarDate`.
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { CalendarDate } from "@internationalized/date";
+
+  let placeholder = $state(new CalendarDate(2024, 8, 1));
+</script>
+
+<Calendar.Root bind:placeholder>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { CalendarDate } from "@internationalized/date";
+
+  let myValue = $state(new CalendarDate(2024, 8, 3));
+</script>
+
+<button onclick={() => (myValue = myValue.add({ days: 1 }))}>Add 1 day</button>
+
+<Calendar.Root type="single" bind:value={myValue}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Fully Controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  let myValue = $state<DateValue>();
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: DateValue) {
+    myValue = newValue;
+  }
+</script>
+
+<Calendar.Root type="single" bind:value={getValue, setValue}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## Default Value from a String
+
+Parse an ISO 8601 date string (e.g. from a database) using `parseDate`:
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { parseDate } from "@internationalized/date";
+
+  const date = "2024-08-03";
+  let value = $state(parseDate(date));
+</script>
+
+<Calendar.Root type="single" {value}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## Validation
+
+### Minimum and Maximum Values
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  const todayDate = today(getLocalTimeZone());
+</script>
+
+<!-- Only allow today and future dates -->
+<Calendar.Root minValue={todayDate}>
+  <!-- ... -->
+</Calendar.Root>
+
+<!-- Only allow dates up to today -->
+<Calendar.Root maxValue={todayDate}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Unavailable Dates
+
+Unavailable dates can be focused and selected, but doing so marks the field as invalid:
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  function isDateUnavailable(date: DateValue) {
+    // Mark the 1st of every month as unavailable
+    return date.day === 1;
+  }
+</script>
+
+<Calendar.Root {isDateUnavailable}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Disabled Dates
+
+Disabled dates cannot be focused or selected at all:
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  function isDateDisabled(date: DateValue) {
+    return date.day === 1;
+  }
+</script>
+
+<Calendar.Root {isDateDisabled}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## Multiple Selection
+
+Set `type="multiple"` to allow selecting several dates at once. Use `maxDays` to cap the selection:
+
+```svelte
+<Calendar.Root type="multiple" maxDays={3}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## Appearance & Behavior
+
+### Fixed Weeks
+
+Render a consistent 6-week grid regardless of the month length:
+
+```svelte
+<Calendar.Root fixedWeeks>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Multiple Months
+
+Display several months simultaneously:
+
+```svelte
+<Calendar.Root numberOfMonths={2} pagedNavigation>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Localization
+
+The calendar formats content according to the `locale` prop (defaults to `'en-US'`):
+
+```svelte
+<Calendar.Root locale="fr-FR">
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Week Start Day
+
+Override the first day of the week (`0` = Sunday, `6` = Saturday):
+
+```svelte
+<Calendar.Root weekStartsOn={1}>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+### Programmatic Month Navigation
+
+Use the `placeholder` prop to implement a custom month/year selector:
+
+```svelte
+<script lang="ts">
+  import { Calendar } from "bits-ui";
+  import { CalendarDate } from "@internationalized/date";
+
+  let placeholder = $state(new CalendarDate(2024, 8, 1));
+</script>
+
+<button onclick={() => (placeholder = placeholder.set({ month: 1 }))}>
+  Jump to January
+</button>
+
+<Calendar.Root bind:placeholder>
+  <!-- ... -->
+</Calendar.Root>
+```
+
+## API Reference
+
+### Calendar.Root
+
+The root component that manages calendar state.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | — | Selection mode. Required. |
+| `value` | `DateValue \| DateValue[]` | `undefined` | The selected date(s). Bindable. |
+| `placeholder` | `DateValue` | current date | Controls the displayed month when no value is selected. Bindable. |
+| `minValue` | `DateValue` | `undefined` | The earliest selectable date. |
+| `maxValue` | `DateValue` | `undefined` | The latest selectable date. |
+| `disabled` | `boolean` | `false` | Prevents all interaction. |
+| `readonly` | `boolean` | `false` | Allows focus/navigation but not selection. |
+| `locale` | `string` | `'en'` | BCP 47 locale string for formatting. |
+| `numberOfMonths` | `number` | `1` | Number of months to display at once. |
+| `pagedNavigation` | `boolean` | `false` | When `true`, navigation advances by `numberOfMonths`. |
+| `weekStartsOn` | `0–6` | `0` | First day of the week (0 = Sunday). |
+| `weekdayFormat` | `"long" \| "short" \| "narrow"` | `"narrow"` | Format for weekday header labels. |
+| `fixedWeeks` | `boolean` | `false` | Always render 6 weeks per month. |
+| `isDateDisabled` | `(date: DateValue) => boolean` | `undefined` | Marks dates as non-interactive. |
+| `isDateUnavailable` | `(date: DateValue) => boolean` | `undefined` | Marks dates as invalid when selected. |
+| `maxDays` | `number` | `undefined` | Max selectable days in `"multiple"` mode. |
+| `preventDeselect` | `boolean` | `false` | Prevents deselecting a date without selecting another. |
+| `calendarLabel` | `string` | `undefined` | Accessible label read by screen readers. |
+| `disableDaysOutsideMonth` | `boolean` | `false` | Prevents selecting days from adjacent months. |
+| `initialFocus` | `boolean` | `undefined` | Auto-focuses selected day or today on mount. |
+| `monthFormat` | `Intl.DateTimeFormatOptions["month"]` | `"long"` | Format for month names. |
+| `yearFormat` | `Intl.DateTimeFormatOptions["year"]` | `"numeric"` | Format for year display. |
+| `onValueChange` | `(value: DateValue \| DateValue[]) => void` | `undefined` | Called when the value changes. |
+| `onPlaceholderChange` | `(value: DateValue) => void` | `undefined` | Called when the placeholder changes. |
+
+The `children` snippet receives `{ months, weekdays }`:
+- `months` — array of month objects with `.value` (DateValue) and `.weeks` (DateValue[][])
+- `weekdays` — array of formatted weekday label strings
+
+### Calendar.Header
+
+A `<header>` element wrapping the navigation controls.
+
+### Calendar.Heading
+
+Displays the current month and year. The `children` snippet receives `{ headingValue: string }`.
+
+### Calendar.PrevButton / Calendar.NextButton
+
+`<button>` elements for month navigation. Automatically disabled at `minValue`/`maxValue` bounds.
+
+### Calendar.Grid
+
+A `<table>` element wrapping the calendar grid for a single month.
+
+### Calendar.GridHead / Calendar.GridBody
+
+`<thead>` and `<tbody>` wrappers for the grid.
+
+### Calendar.GridRow
+
+A `<tr>` element for a row of header cells or day cells.
+
+### Calendar.HeadCell
+
+A `<th>` element for a weekday header label.
+
+### Calendar.Cell
+
+A `<td>` element for a single day. Requires `date` (DateValue) and `month` (DateValue) props. The `children` snippet receives `{ disabled, unavailable, selected }`.
+
+### Calendar.Day
+
+A `<div>` inside a `Cell` that renders the day number and handles interaction. The `children` snippet receives `{ disabled, unavailable, selected, day }`.
+
+### Calendar.MonthSelect
+
+A `<select>` element for jumping to a specific month.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `months` | `number[]` | `[1..12]` | Which month numbers to include. |
+| `monthFormat` | `string \| function` | `"long"` | Display format for option labels. |
+
+### Calendar.YearSelect
+
+A `<select>` element for jumping to a specific year.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `years` | `number[]` | last 100 years | Which years to include. |
+| `yearFormat` | `string \| function` | `"numeric"` | Display format for option labels. |
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` types, immutability, parsing, and formatting
+- [Range Calendar](/components/range-calendar) — date range selection
+- [Date Picker](/components/date-picker) — calendar combined with a popover input

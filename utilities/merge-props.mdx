@@ -1,0 +1,149 @@
+---
+title: "mergeProps: Merge prop objects in Bits UI"
+description: "Combine multiple prop objects into one with smart handling for event handlers, class names, style strings, and plain functions without losing any callbacks."
+---
+
+`mergeProps` is a utility function that merges multiple props objects into a single object. It is used internally by every Bits UI component to combine the props you pass in with the props the library provides — and it is exported so you can use the same behavior in your own components.
+
+The function handles the four cases that a naive spread would get wrong: event handlers are chained (not overwritten), class names are concatenated, style strings and objects are merged property-by-property, and non-event functions are also chained.
+
+## Import
+
+```ts
+import { mergeProps } from "bits-ui";
+```
+
+## Function signature
+
+```ts
+function mergeProps<T extends Record<string, unknown>>(
+  ...args: T[]
+): T
+```
+
+<ParamField path="...args" type="Record<string, unknown>[]" required>
+  One or more props objects to merge. Props from later objects take precedence, except for event handlers and functions which are always chained.
+</ParamField>
+
+<ResponseField name="return value" type="Record<string, unknown>">
+  A new merged props object combining all inputs.
+</ResponseField>
+
+## Behavior
+
+### Event handlers
+
+Handlers are chained in the order they are passed. If any handler calls `event.preventDefault()`, all subsequent handlers in the chain are skipped.
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { onclick: (e: MouseEvent) => console.log("First") };
+const props2 = { onclick: (e: MouseEvent) => console.log("Second") };
+
+const merged = mergeProps(props1, props2);
+merged.onclick(new MouseEvent("click")); // logs "First" then "Second"
+```
+
+With cancellation:
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { onclick: (e: MouseEvent) => console.log("First") };
+const props2 = {
+  onclick: (e: MouseEvent) => {
+    console.log("Second");
+    e.preventDefault(); // cancels the chain here
+  },
+};
+const props3 = { onclick: (e: MouseEvent) => console.log("Third") };
+
+const merged = mergeProps(props1, props2, props3);
+merged.onclick(new MouseEvent("click")); // logs "First" then "Second" — "Third" is skipped
+```
+
+### Non-event functions
+
+Plain functions (those not matching the `on*` event naming pattern) are also chained, but they cannot cancel subsequent calls:
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { doSomething: () => console.log("Action 1") };
+const props2 = { doSomething: () => console.log("Action 2") };
+
+const merged = mergeProps(props1, props2);
+merged.doSomething(); // logs "Action 1" then "Action 2"
+```
+
+### Class names
+
+Class strings are merged using [`clsx`](https://www.npmjs.com/package/clsx), so you can pass strings, arrays, or objects:
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { class: "text-lg font-bold" };
+const props2 = { class: ["bg-blue-500", "hover:bg-blue-600"] };
+
+const merged = mergeProps(props1, props2);
+console.log(merged.class); // "text-lg font-bold bg-blue-500 hover:bg-blue-600"
+```
+
+### Styles
+
+Style strings and objects are merged property-by-property. Later values override earlier ones for the same property:
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { style: { color: "red", fontSize: "16px" } };
+const props2 = { style: "background-color: blue; font-weight: bold;" };
+
+const merged = mergeProps(props1, props2);
+console.log(merged.style);
+// "color: red; font-size: 16px; background-color: blue; font-weight: bold;"
+```
+
+CSS custom properties are also supported:
+
+```ts
+import { mergeProps } from "bits-ui";
+
+const props1 = { style: "--foo: red" };
+const props2 = { style: { "--foo": "green", color: "blue" } };
+
+const merged = mergeProps(props1, props2);
+console.log(merged.style); // "--foo: green; color: blue;"
+```
+
+## Usage in components
+
+The most common use case is forwarding props to a Bits UI component while preserving your own handlers and classes:
+
+```svelte
+<script lang="ts">
+  import { mergeProps, Button } from "bits-ui";
+  import type { Button as ButtonType } from "bits-ui";
+
+  let { onclick, class: className, ...restProps }: ButtonType.RootProps = $props();
+
+  function handleClick(e: MouseEvent) {
+    console.log("wrapper click");
+  }
+
+  const mergedProps = $derived(
+    mergeProps(restProps, {
+      onclick: handleClick,
+      class: ["my-button", className],
+    })
+  );
+</script>
+
+<Button.Root {...mergedProps} />
+```
+
+<Tip>
+  When building compound wrapper components, use `mergeProps` instead of spreading two objects with `{...a, ...b}`. The spread syntax silently drops all but the last event handler for any given event, while `mergeProps` chains them all.
+</Tip>

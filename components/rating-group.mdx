@@ -1,0 +1,249 @@
+---
+title: "Rating Group: Star Rating and Feedback Input Control"
+description: An accessible rating selector rendered as a slider with customizable items, half-star support, hover preview, RTL layout, and hidden input for form submission.
+---
+
+The Rating Group component lets users submit numeric ratings using any visual representation you choose — stars, hearts, numbers, or custom icons. Under the hood it follows the WAI-ARIA slider pattern rather than a radiogroup, which gives screen readers better real-time feedback as the value changes. Each item's state (`"active"`, `"inactive"`, or `"partial"` for half ratings) is exposed via the `children` snippet so you can render any indicator.
+
+## Installation
+
+```typescript
+import { RatingGroup } from "bits-ui";
+```
+
+## Usage
+
+### Basic star rating
+
+```svelte
+<script lang="ts">
+  import { RatingGroup } from "bits-ui";
+  let rating = $state(0);
+</script>
+
+<RatingGroup.Root max={5} bind:value={rating}>
+  {#snippet children({ items })}
+    {#each items as item (item.index)}
+      <RatingGroup.Item index={item.index}>
+        {#if item.state === "active"}⭐{:else}☆{/if}
+      </RatingGroup.Item>
+    {/each}
+  {/snippet}
+</RatingGroup.Root>
+```
+
+### Half-star ratings
+
+```svelte
+<script lang="ts">
+  import { RatingGroup } from "bits-ui";
+</script>
+
+<RatingGroup.Root max={5} allowHalf>
+  {#snippet children({ items })}
+    {#each items as item (item.index)}
+      <RatingGroup.Item index={item.index}>
+        {#if item.state === "inactive"}
+          ☆
+        {:else if item.state === "active"}
+          ★
+        {:else if item.state === "partial"}
+          ⯨
+        {/if}
+      </RatingGroup.Item>
+    {/each}
+  {/snippet}
+</RatingGroup.Root>
+```
+
+### Reusable component
+
+```svelte title="MyRatingGroup.svelte"
+<script lang="ts">
+  import { RatingGroup, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    value = $bindable(0),
+    ref = $bindable(null),
+    showLabel = true,
+    max = 5,
+    ...restProps
+  }: WithoutChildrenOrChild<RatingGroup.RootProps> & {
+    showLabel?: boolean;
+  } = $props();
+</script>
+
+<div style="display: flex; flex-direction: column; gap: 8px;">
+  <RatingGroup.Root bind:value bind:ref {max} {...restProps}>
+    {#snippet children({ items })}
+      {#each items as item (item.index)}
+        <RatingGroup.Item index={item.index}>
+          {#if item.state === "inactive"}☆
+          {:else if item.state === "active"}★
+          {:else if item.state === "partial"}⯨
+          {/if}
+        </RatingGroup.Item>
+      {/each}
+    {/snippet}
+  </RatingGroup.Root>
+
+  {#if showLabel}
+    <p>{value} / {max} stars</p>
+  {/if}
+</div>
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { RatingGroup } from "bits-ui";
+  let rating = $state(3);
+</script>
+
+<button onclick={() => (rating = 5)}>Give 5 stars</button>
+
+<RatingGroup.Root max={5} bind:value={rating}>
+  {#snippet children({ items })}
+    {#each items as item (item.index)}
+      <RatingGroup.Item index={item.index}>
+        {item.state === "active" ? "★" : "☆"}
+      </RatingGroup.Item>
+    {/each}
+  {/snippet}
+</RatingGroup.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { RatingGroup } from "bits-ui";
+  let rating = $state(0);
+
+  function getValue() { return rating; }
+  function setValue(v: number) {
+    if (v >= 0 && v <= 5) rating = v;
+  }
+</script>
+
+<RatingGroup.Root max={5} bind:value={getValue, setValue}>
+  <!-- … -->
+</RatingGroup.Root>
+```
+
+## HTML Forms
+
+```svelte
+<form method="POST">
+  <RatingGroup.Root name="productRating" max={5} required>
+    {#snippet children({ items })}
+      {#each items as item (item.index)}
+        <RatingGroup.Item index={item.index}>
+          {item.state === "active" ? "★" : "☆"}
+        </RatingGroup.Item>
+      {/each}
+    {/snippet}
+  </RatingGroup.Root>
+  <button type="submit">Submit review</button>
+</form>
+```
+
+## Readonly Mode
+
+Display an existing rating without allowing interaction.
+
+```svelte
+<RatingGroup.Root readonly value={4.5} max={5}>
+  <!-- items -->
+</RatingGroup.Root>
+```
+
+## Disabled State
+
+```svelte
+<RatingGroup.Root disabled max={5}>
+  <!-- items -->
+</RatingGroup.Root>
+```
+
+## Hover Preview
+
+By default, hovering over items previews the potential rating. Disable with `hoverPreview={false}`.
+
+```svelte
+<RatingGroup.Root hoverPreview={false} max={5}>
+  <!-- items -->
+</RatingGroup.Root>
+```
+
+## RTL Support
+
+Wrap in a container with `dir="rtl"`. Arrow key navigation reverses automatically.
+
+```svelte
+<div dir="rtl">
+  <RatingGroup.Root max={5}>
+    <!-- items -->
+  </RatingGroup.Root>
+</div>
+```
+
+## Custom Minimum Rating
+
+Prevent the value from dropping below a given minimum.
+
+```svelte
+<RatingGroup.Root min={1} value={3} max={5}>
+  <!-- items -->
+</RatingGroup.Root>
+```
+
+## API Reference
+
+### `RatingGroup.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `number` | `0` | Current rating value. Bindable. |
+| `max` | `number` | `5` | Maximum rating and number of items rendered. |
+| `min` | `number` | `0` | Minimum allowed rating value. |
+| `disabled` | `boolean` | `false` | Prevents interaction and removes from tab order. |
+| `readonly` | `boolean` | `false` | Allows focus but prevents value changes. |
+| `required` | `boolean` | `false` | Marks the hidden input as required. |
+| `name` | `string` | `undefined` | Enables hidden input for form submission. |
+| `allowHalf` | `boolean` | `false` | Enables half-step ratings (e.g. 3.5). |
+| `hoverPreview` | `boolean` | `true` | Show potential rating on hover. |
+| `onValueChange` | `(v: number) => void` | — | Called when the rating changes. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable DOM reference. |
+| `children` | `Snippet<[{ items: { index: number; state: "active" \| "inactive" \| "partial" }[] }]>` | — | Render each rating item. |
+
+### `RatingGroup.Item`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `index` | `number` | — | **Required.** Zero-based index from the `items` snippet array. |
+
+## Accessibility
+
+The component follows the WAI-ARIA **slider** pattern for best screen reader support.
+
+- Root element: `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`.
+- Rating items: `role="presentation"` to avoid redundant announcements.
+- Keyboard: arrow keys increment/decrement by 1 (or 0.5 in half mode); `Home`/`End` jump to min/max; `PageUp`/`PageDown` move by 1; typing a number (e.g. `3`) sets the rating directly.
+- Single tab stop — the entire group acts as one focusable unit.
+- Customise screen reader announcements with a custom `aria-valuetext` function:
+
+```svelte
+<RatingGroup.Root
+  max={5}
+  aria-valuetext={(value, max) =>
+    value === 0
+      ? "No rating selected"
+      : `${value} out of ${max} stars`}
+>
+  <!-- … -->
+</RatingGroup.Root>
+```

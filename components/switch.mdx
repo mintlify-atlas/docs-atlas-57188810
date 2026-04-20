@@ -1,0 +1,162 @@
+---
+title: "Switch: Accessible On/Off Toggle Control"
+description: A binary toggle control with a movable thumb, hidden form input support, and data attributes for styling checked and unchecked states.
+---
+
+The Switch component is a visually intuitive alternative to a checkbox for binary choices. It is composed of two parts: the `Root`, which manages state and ARIA semantics, and the `Thumb`, which is the visual indicator that moves to reflect the current state. Like the Checkbox, it renders a hidden `<input>` for form submission when a `name` prop is provided.
+
+## Installation
+
+```typescript
+import { Switch } from "bits-ui";
+```
+
+## Usage
+
+### Basic switch
+
+```svelte
+<script lang="ts">
+  import { Switch } from "bits-ui";
+</script>
+
+<Switch.Root>
+  <Switch.Thumb />
+</Switch.Root>
+```
+
+### With a label
+
+```svelte
+<script lang="ts">
+  import { Switch, Label, useId } from "bits-ui";
+  const id = useId();
+</script>
+
+<Switch.Root {id}>
+  <Switch.Thumb />
+</Switch.Root>
+<Label.Root for={id}>Enable notifications</Label.Root>
+```
+
+### Reusable component
+
+```svelte title="MySwitch.svelte"
+<script lang="ts">
+  import { Switch, Label, useId, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    id = useId(),
+    checked = $bindable(false),
+    ref = $bindable(null),
+    labelText,
+    ...restProps
+  }: WithoutChildrenOrChild<Switch.RootProps> & {
+    labelText: string;
+  } = $props();
+</script>
+
+<Switch.Root bind:checked bind:ref {id} {...restProps}>
+  <Switch.Thumb />
+</Switch.Root>
+<Label.Root for={id}>{labelText}</Label.Root>
+```
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import MySwitch from "$lib/components/MySwitch.svelte";
+  let notifications = $state(true);
+</script>
+
+<MySwitch bind:checked={notifications} labelText="Enable notifications" />
+```
+
+## Managing Checked State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Switch } from "bits-ui";
+  let enabled = $state(false);
+</script>
+
+<button onclick={() => (enabled = false)}>Turn off</button>
+<Switch.Root bind:checked={enabled}>
+  <Switch.Thumb />
+</Switch.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { Switch } from "bits-ui";
+  let enabled = $state(false);
+
+  function getChecked() { return enabled; }
+  function setChecked(v: boolean) { enabled = v; }
+</script>
+
+<Switch.Root bind:checked={getChecked, setChecked}>
+  <Switch.Thumb />
+</Switch.Root>
+```
+
+## Disabled State
+
+```svelte
+<Switch.Root disabled>
+  <Switch.Thumb />
+</Switch.Root>
+```
+
+## HTML Forms
+
+When `name` is provided a hidden `<input type="checkbox">` is rendered and submitted with the form. The default submitted value is `"on"` when checked; use `value` to override.
+
+```svelte
+<form method="POST">
+  <Switch.Root name="darkMode" value="enabled">
+    <Switch.Thumb />
+  </Switch.Root>
+  <button type="submit">Save settings</button>
+</form>
+```
+
+Add `required` to prevent submission while unchecked.
+
+## Styling
+
+Data attributes are applied to `Switch.Root` so you can style states without class logic:
+
+```css
+[data-state="checked"]   { background: green; }
+[data-state="unchecked"] { background: grey; }
+[data-disabled]          { opacity: 0.5; cursor: not-allowed; }
+```
+
+## API Reference
+
+### `Switch.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | `false` | Whether the switch is on. Bindable. |
+| `disabled` | `boolean` | `false` | Prevents interaction. |
+| `required` | `boolean` | `false` | Applied to the hidden input for form validation. |
+| `name` | `string` | `undefined` | Enables hidden input for form submission. |
+| `value` | `string` | `"on"` | Value submitted with the form when checked. |
+| `onCheckedChange` | `(v: boolean) => void` | — | Callback when the checked state changes. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable DOM reference. |
+
+### `Switch.Thumb`
+
+The movable thumb element. Accepts standard `HTMLSpanAttributes`. No component-specific props.
+
+## Accessibility
+
+- Renders with `role="switch"` and `aria-checked`.
+- Keyboard: `Space` or `Enter` toggles the switch; `Tab` moves focus.
+- The `Thumb` is decorative — do not place interactive content inside it.
+- Always pair with a visible label via `Label.Root` or `aria-label` so screen readers announce the purpose of the switch.

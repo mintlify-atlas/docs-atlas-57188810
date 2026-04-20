@@ -1,0 +1,93 @@
+---
+title: "Label: Accessible Form Field Label Primitive"
+description: A semantic label component that correctly handles the `for` prop, mapping it to the HTML `htmlFor` attribute for reliable input association.
+---
+
+The Label component is a thin wrapper around the native `<label>` element. Its primary purpose is to handle the Svelte quirk where the `for` prop must be transformed into the `htmlFor` attribute — keeping your templates readable while producing correct HTML. It is designed to pair with any focusable Bits UI component such as Checkbox, Switch, RadioGroup.Item, or Slider.
+
+## Installation
+
+```typescript
+import { Label } from "bits-ui";
+```
+
+## Usage
+
+### Basic label
+
+```svelte
+<script lang="ts">
+  import { Label } from "bits-ui";
+</script>
+
+<Label.Root for="my-input">Full name</Label.Root>
+<input id="my-input" type="text" />
+```
+
+### With Bits UI components
+
+Use `useId()` to generate a stable, collision-free ID shared between the control and its label.
+
+```svelte
+<script lang="ts">
+  import { Checkbox, Label, useId } from "bits-ui";
+  const id = useId();
+</script>
+
+<div style="display: flex; align-items: center; gap: 8px;">
+  <Checkbox.Root {id} name="terms">
+    {#snippet children({ checked })}
+      {checked ? "✓" : ""}
+    {/snippet}
+  </Checkbox.Root>
+  <Label.Root for={id}>I agree to the terms of service</Label.Root>
+</div>
+```
+
+### With Switch
+
+```svelte
+<script lang="ts">
+  import { Switch, Label, useId } from "bits-ui";
+  const id = useId();
+</script>
+
+<Switch.Root {id}>
+  <Switch.Thumb />
+</Switch.Root>
+<Label.Root for={id}>Dark mode</Label.Root>
+```
+
+### Wrapping the control
+
+A `<label>` can also wrap its associated control directly (no `for` required).
+
+```svelte
+<script lang="ts">
+  import { Label } from "bits-ui";
+</script>
+
+<Label.Root>
+  <span>Username</span>
+  <input type="text" name="username" />
+</Label.Root>
+```
+
+## API Reference
+
+### `Label.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `for` | `string \| undefined` | `undefined` | The `id` of the associated form control. Rendered as `htmlFor` on the underlying `<label>` element. |
+| `ref` | `HTMLLabelElement \| null` | `null` | Bindable reference to the underlying DOM element. |
+| `children` | `Snippet` | — | Label content. |
+
+All standard `HTMLLabelAttributes` are forwarded to the `<label>` element.
+
+## Accessibility
+
+- A visible label greatly improves usability and is required for WCAG 2.1 AA compliance on interactive controls.
+- The `for` association means clicking the label focuses or activates the associated control.
+- When a visible label is not possible, use `aria-label` or `aria-labelledby` directly on the control instead.
+- Avoid nesting interactive elements (buttons, anchors) inside `Label.Root` — click events on those elements will propagate to the label and may double-trigger the associated control.

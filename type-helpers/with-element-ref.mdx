@@ -1,0 +1,97 @@
+---
+title: "WithElementRef: Add a ref prop to component types"
+description: "A type helper that adds an optional ref prop to any component props type, enabling the bind:ref pattern used by all Bits UI components."
+---
+
+`WithElementRef` is a TypeScript type helper that adds an optional `ref` prop to any props type. It follows the same `ref` pattern used by every Bits UI component, letting you bind to the underlying DOM element from a parent component.
+
+Use it when building your own wrapper components so consumers can still access the underlying element via `bind:ref`.
+
+## Type signature
+
+```ts
+type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & {
+  ref?: U | null;
+};
+```
+
+<ResponseField name="T" type="type parameter">
+  The base props type to extend with the `ref` prop.
+</ResponseField>
+
+<ResponseField name="U" type="type parameter" default="HTMLElement">
+  The specific `HTMLElement` subtype for the `ref`. Defaults to `HTMLElement`. Use a more specific type like `HTMLButtonElement` when the element type is known.
+</ResponseField>
+
+<ResponseField name="ref" type="U | null | undefined">
+  An optional bindable reference that will be set to the underlying DOM element after mount.
+</ResponseField>
+
+## Import
+
+```ts
+import type { WithElementRef } from "bits-ui";
+```
+
+## Usage
+
+### Wrapping a native element
+
+Add `ref` support to a custom button so parent components can bind to the `<button>` element:
+
+```svelte title="CustomButton.svelte"
+<script lang="ts">
+  import type { WithElementRef } from "bits-ui";
+
+  type Props = WithElementRef<
+    {
+      label: string;
+      variant?: "primary" | "secondary";
+    },
+    HTMLButtonElement
+  >;
+
+  let { label, variant = "primary", ref = $bindable(null) }: Props = $props();
+</script>
+
+<button bind:this={ref} class="btn btn-{variant}">
+  {label}
+</button>
+```
+
+The parent can then bind to the element:
+
+```svelte
+<script lang="ts">
+  import CustomButton from "./CustomButton.svelte";
+
+  let buttonEl: HTMLButtonElement | null = $state(null);
+</script>
+
+<CustomButton bind:ref={buttonEl} label="Click me" />
+```
+
+### Wrapping a Bits UI component
+
+When wrapping a Bits UI component, combine `WithElementRef` with the component's own props type:
+
+```svelte title="AppButton.svelte"
+<script lang="ts">
+  import { Button, type WithElementRef } from "bits-ui";
+  import type { Button as ButtonType } from "bits-ui";
+
+  type Props = WithElementRef<ButtonType.RootProps, HTMLButtonElement>;
+
+  let { ref = $bindable(null), ...restProps }: Props = $props();
+</script>
+
+<Button.Root bind:ref {...restProps} />
+```
+
+<Note>
+  `WithElementRef` is the same type used by Bits UI's own component definitions. Using it in your wrappers ensures that the `ref` prop is typed and bindable consistently with the rest of the library.
+</Note>
+
+<Tip>
+  Always use `$bindable(null)` as the default value for `ref` in your `$props()` destructuring. This ensures the ref is reactive and can be bound from a parent.
+</Tip>

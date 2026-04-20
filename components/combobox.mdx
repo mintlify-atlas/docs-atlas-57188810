@@ -1,0 +1,320 @@
+---
+title: "Combobox: Searchable Dropdown with Filtered Options"
+description: A combobox combining a text input with a floating dropdown list, supporting single or multiple selection, item filtering, grouped options, and portal rendering.
+---
+
+The Combobox component extends the Select pattern with a text `Input` field that lets users search and filter the list of options. Like Select, a `type` prop discriminates `"single"` (value is `string`) from `"multiple"` (value is `string[]`). The dropdown is positioned with [Floating UI](https://floating-ui.com/) and rendered in a portal. Because filtering is application-specific, Bits UI exposes the raw input events so you can implement your own logic.
+
+## Installation
+
+```typescript
+import { Combobox } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+
+  const allItems = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+    { value: "cherry", label: "Cherry" },
+  ];
+
+  let search = $state("");
+  const filtered = $derived(
+    allItems.filter((i) =>
+      i.label.toLowerCase().includes(search.toLowerCase())
+    )
+  );
+</script>
+
+<Combobox.Root type="single">
+  <Combobox.Input
+    oninput={(e) => (search = e.currentTarget.value)}
+    placeholder="Search fruits…"
+  />
+  <Combobox.Trigger>Open</Combobox.Trigger>
+  <Combobox.Portal>
+    <Combobox.Content>
+      {#each filtered as item (item.value)}
+        <Combobox.Item value={item.value} label={item.label}>
+          {#snippet children({ selected })}
+            {selected ? "✓ " : ""}{item.label}
+          {/snippet}
+        </Combobox.Item>
+      {:else}
+        <span>No results found</span>
+      {/each}
+    </Combobox.Content>
+  </Combobox.Portal>
+</Combobox.Root>
+```
+
+### Reusable component
+
+```svelte title="CustomCombobox.svelte"
+<script lang="ts">
+  import { Combobox, type WithoutChildrenOrChild, mergeProps } from "bits-ui";
+
+  type Item = { value: string; label: string; disabled?: boolean };
+  type Props = Combobox.RootProps & {
+    items?: Item[];
+    inputProps?: WithoutChildrenOrChild<Combobox.InputProps>;
+    contentProps?: WithoutChildrenOrChild<Combobox.ContentProps>;
+  };
+
+  let {
+    items = [],
+    value = $bindable(),
+    open = $bindable(false),
+    type,
+    inputProps,
+    contentProps,
+    ...restProps
+  }: Props = $props();
+
+  let searchValue = $state("");
+
+  const filteredItems = $derived(
+    searchValue === ""
+      ? items
+      : items.filter((i) =>
+          i.label.toLowerCase().includes(searchValue.toLowerCase())
+        )
+  );
+
+  function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
+    searchValue = e.currentTarget.value;
+  }
+  function handleOpenChange(newOpen: boolean) {
+    if (!newOpen) searchValue = "";
+  }
+
+  const mergedRootProps = $derived(
+    mergeProps(restProps, { onOpenChange: handleOpenChange })
+  );
+  const mergedInputProps = $derived(
+    mergeProps(inputProps, { oninput: handleInput })
+  );
+</script>
+
+<Combobox.Root {type} {items} bind:value={value as never} bind:open {...mergedRootProps}>
+  <Combobox.Input {...mergedInputProps} />
+  <Combobox.Trigger>Open</Combobox.Trigger>
+  <Combobox.Portal>
+    <Combobox.Content {...contentProps}>
+      {#each filteredItems as item (item.value)}
+        <Combobox.Item {...item}>
+          {#snippet children({ selected })}
+            {item.label}{selected ? " ✓" : ""}
+          {/snippet}
+        </Combobox.Item>
+      {:else}
+        <span>No results found</span>
+      {/each}
+    </Combobox.Content>
+  </Combobox.Portal>
+</Combobox.Root>
+```
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import CustomCombobox from "$lib/components/CustomCombobox.svelte";
+
+  const items = [
+    { value: "mango", label: "Mango" },
+    { value: "watermelon", label: "Watermelon" },
+    { value: "apple", label: "Apple" },
+  ];
+</script>
+
+<CustomCombobox type="single" {items} />
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+  let selected = $state("");
+</script>
+
+<Combobox.Root type="single" bind:value={selected}><!-- … --></Combobox.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+  let selected = $state("");
+
+  function getValue() { return selected; }
+  function setValue(v: string) { selected = v; }
+</script>
+
+<Combobox.Root type="single" bind:value={getValue, setValue}><!-- … --></Combobox.Root>
+```
+
+## Multiple Selection
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+  let selected = $state<string[]>([]);
+</script>
+
+<Combobox.Root type="multiple" bind:value={selected}>
+  <!-- items -->
+</Combobox.Root>
+```
+
+## Managing Open State
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+  let open = $state(false);
+</script>
+
+<Combobox.Root type="single" bind:open><!-- … --></Combobox.Root>
+```
+
+## Grouped Options
+
+```svelte
+<Combobox.Content>
+  <Combobox.Group>
+    <Combobox.GroupHeading>Tropical</Combobox.GroupHeading>
+    <Combobox.Item value="mango" label="Mango">
+      {#snippet children({ selected })}Mango{/snippet}
+    </Combobox.Item>
+  </Combobox.Group>
+</Combobox.Content>
+```
+
+## Opt-out of Floating UI
+
+```svelte
+<Combobox.Root type="single">
+  <Combobox.Input />
+  <Combobox.ContentStatic>
+    <!-- items positioned by your own CSS -->
+  </Combobox.ContentStatic>
+</Combobox.Root>
+```
+
+## Svelte Transitions
+
+```svelte
+<script lang="ts">
+  import { Combobox } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Combobox.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly={{ y: -8 }}>
+          <!-- items -->
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</Combobox.Content>
+```
+
+## API Reference
+
+### `Combobox.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | — | **Required.** Discriminates the value type. |
+| `value` | `string` (single) or `string[]` (multiple) | `undefined` | Selected value(s). Bindable. |
+| `open` | `boolean` | `false` | Dropdown open state. Bindable. |
+| `inputValue` | `string` | `undefined` | Programmatically sync the input display value. |
+| `disabled` | `boolean` | `false` | Disables the entire combobox. |
+| `required` | `boolean` | `false` | Marks the hidden input as required. |
+| `name` | `string` | `undefined` | Enables hidden input for form submission. |
+| `loop` | `boolean` | `false` | Keyboard navigation wraps around. |
+| `scrollAlignment` | `"nearest" \| "center"` | `"nearest"` | Scroll behavior when navigating with keyboard. |
+| `allowDeselect` | `boolean` | `false` | Clicking a selected item deselects it (single mode only). |
+| `items` | `{ value: string; label: string; disabled?: boolean }[]` | `undefined` | Item data used for autofill and type handling. |
+| `onValueChange` | `(v: string \| string[]) => void` | — | Called when selection changes. |
+| `onOpenChange` | `(v: boolean) => void` | — | Called when open state changes. |
+| `onOpenChangeComplete` | `(v: boolean) => void` | — | Called after open/close animation completes. |
+
+### `Combobox.Input`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `defaultValue` | `string` | `undefined` | Initial input text on first mount. |
+| `clearOnDeselect` | `boolean` | `false` | Clear the input when the last selected item is deselected. |
+
+All standard `HTMLInputAttributes` except `value` are forwarded.
+
+### `Combobox.Trigger`
+
+Button that toggles the dropdown. Accepts standard button attributes.
+
+### `Combobox.Content`
+
+Floating dropdown panel powered by Floating UI.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep mounted when closed for transitions. |
+| `preventScroll` | `boolean` | `false` | Lock body scroll while open. |
+| `customAnchor` | `string \| HTMLElement` | `undefined` | Alternative anchor element. |
+| `loop` | `boolean` | `false` | Keyboard navigation wraps around. |
+
+### `Combobox.ContentStatic`
+
+Alternative to `Combobox.Content` that opts out of Floating UI.
+
+### `Combobox.Item`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | **Required.** Value this item represents. |
+| `label` | `string` | `value` | Human-readable label. |
+| `disabled` | `boolean` | `false` | Disables selection. |
+| `onHighlight` | `() => void` | — | Called when the item is highlighted. |
+| `onUnhighlight` | `() => void` | — | Called when the item loses highlight. |
+| `children` | `Snippet<[{ selected: boolean; highlighted: boolean }]>` | — | Custom item rendering. |
+
+### `Combobox.Group` / `Combobox.GroupHeading` / `Combobox.Separator`
+
+Semantic grouping helpers. No component-specific props.
+
+### `Combobox.Viewport`
+
+Wraps items to enable scroll button detection.
+
+### `Combobox.ScrollUpButton` / `Combobox.ScrollDownButton`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `delay` | `(tick: number) => number` | `() => 50` | Controls auto-scroll interval. |
+
+### `Combobox.Portal` / `Combobox.Arrow`
+
+Portal renders content into a different DOM node. Arrow is a decorative pointer toward the anchor.
+
+## Accessibility
+
+- `Combobox.Input` has `role="combobox"`, `aria-expanded`, and `aria-autocomplete="list"`.
+- The content has `role="listbox"`; items have `role="option"` and `aria-selected`.
+- Focus remains on the Input while navigating with arrow keys; `aria-activedescendant` tracks the highlighted item.
+- `Escape` closes the dropdown and returns focus to the Input.
+- `Enter` selects the highlighted item.
+- Style highlighted items using the `data-highlighted` attribute on `Combobox.Item`.

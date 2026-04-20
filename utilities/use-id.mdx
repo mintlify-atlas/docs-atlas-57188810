@@ -1,0 +1,88 @@
+---
+title: "useId: Generate unique element IDs in Bits UI"
+description: "A utility function that generates stable, unique IDs using a global counter — used internally by Bits UI and exported for use in your own components."
+---
+
+`useId` is a utility function that generates a unique string ID on every call. It uses a global counter prefixed with `"bits"` by default, producing IDs like `bits-1`, `bits-2`, and so on. All Bits UI components use this function internally to wire up `id`, `for`, `aria-labelledby`, and similar attributes.
+
+The function is exported so you can use the same mechanism in your own components, keeping ID generation consistent across your app.
+
+## Import
+
+```ts
+import { useId } from "bits-ui";
+```
+
+## Function signature
+
+```ts
+function useId(prefix?: string): string
+```
+
+<ParamField path="prefix" type="string" default='"bits"'>
+  Optional prefix for the generated ID. Defaults to `"bits"`, producing IDs like `"bits-1"`, `"bits-2"`.
+</ParamField>
+
+<ResponseField name="return value" type="string">
+  A unique string ID in the format `"{prefix}-{n}"` where `n` is a monotonically increasing global counter.
+</ResponseField>
+
+## Usage
+
+### Linking a label to an input
+
+The most common use case is generating a stable ID to connect a `<label>` to its `<input>`:
+
+```svelte
+<script lang="ts">
+  import { useId } from "bits-ui";
+
+  const id = useId();
+</script>
+
+<label for={id}>Email address</label>
+<input type="email" {id} />
+```
+
+### Custom prefix
+
+Pass a prefix to make IDs easier to identify in the DOM:
+
+```svelte
+<script lang="ts">
+  import { useId } from "bits-ui";
+
+  const descriptionId = useId("dialog-description");
+</script>
+
+<p id={descriptionId}>This dialog confirms your action.</p>
+<div aria-describedby={descriptionId} role="dialog">
+  <!-- ... -->
+</div>
+```
+
+### Multiple IDs in one component
+
+Call `useId` once per element that needs an ID:
+
+```svelte
+<script lang="ts">
+  import { useId } from "bits-ui";
+
+  const titleId = useId();
+  const descriptionId = useId();
+</script>
+
+<div
+  role="dialog"
+  aria-labelledby={titleId}
+  aria-describedby={descriptionId}
+>
+  <h2 id={titleId}>Confirm deletion</h2>
+  <p id={descriptionId}>This action cannot be undone.</p>
+</div>
+```
+
+<Note>
+  `useId` generates IDs at call time using a global counter. Each call returns a new unique value — do not call it inside a loop or a reactive block, as that would produce a new ID on every re-render. Call it at the top level of your `<script>` block.
+</Note>

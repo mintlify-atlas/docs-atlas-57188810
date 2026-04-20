@@ -1,0 +1,86 @@
+---
+title: "Button: Polymorphic Link and Action Component"
+description: A single-component primitive that renders as a button by default and switches to an anchor element when the `href` prop is provided.
+---
+
+The Button component is a lightweight, polymorphic primitive. Without an `href` prop it renders a native `<button>` element; add `href` and it becomes an `<a>` tag — no extra components required. This makes it straightforward to build accessible action controls and in-page or external links from a single import.
+
+## Installation
+
+```typescript
+import { Button } from "bits-ui";
+```
+
+## Usage
+
+### Basic button
+
+```svelte
+<script lang="ts">
+  import { Button } from "bits-ui";
+</script>
+
+<Button.Root>Click me</Button.Root>
+```
+
+### Link button
+
+Passing `href` switches the rendered element to an `<a>` tag. All standard anchor attributes (`target`, `rel`, etc.) are forwarded.
+
+```svelte
+<script lang="ts">
+  import { Button } from "bits-ui";
+</script>
+
+<Button.Root href="https://example.com" target="_blank" rel="noopener noreferrer">
+  Visit site
+</Button.Root>
+```
+
+### Disabled state
+
+```svelte
+<Button.Root disabled>Unavailable</Button.Root>
+```
+
+### Custom element via child snippet
+
+Use the `child` snippet for render delegation — pass your own element while keeping Bits UI's behaviour props and data attributes.
+
+```svelte
+<script lang="ts">
+  import { Button } from "bits-ui";
+</script>
+
+<Button.Root>
+  {#snippet child({ props })}
+    <button {...props} class="my-button">Custom</button>
+  {/snippet}
+</Button.Root>
+```
+
+See [child snippet](/child-snippet) for details.
+
+## API Reference
+
+### `Button.Root`
+
+The sole component of this primitive. Renders a `<button>` or `<a>` depending on whether `href` is supplied.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `href` | `string \| undefined` | `undefined` | When provided the element renders as `<a>`. Mutually exclusive with button-specific props. |
+| `type` | `"button" \| "submit" \| "reset" \| undefined` | `undefined` | Maps to the native button `type` attribute. Only valid without `href`. |
+| `disabled` | `boolean \| undefined` | `undefined` | Disables the button or adds `aria-disabled` on the anchor. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable reference to the underlying DOM element. |
+| `children` | `Snippet` | — | Default slot content. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+All other standard `HTMLButtonAttributes` (button mode) or `HTMLAnchorAttributes` (anchor mode) are forwarded to the element.
+
+## Accessibility
+
+- In button mode the component renders a native `<button>`, giving keyboard focus and `Enter`/`Space` activation for free.
+- In anchor mode the element is naturally focusable and activated by `Enter`.
+- Avoid wrapping a `<Button.Root href="…">` inside another `<a>` — nested anchors are invalid HTML.
+- Use `aria-label` when button content is icon-only.

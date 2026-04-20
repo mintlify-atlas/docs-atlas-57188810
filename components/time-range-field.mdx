@@ -1,0 +1,310 @@
+---
+title: Time Range Field — Segmented Start and End Time Input
+description: A Svelte 5 headless component providing two segmented time inputs for capturing a start and end time range with full keyboard accessibility.
+---
+
+The `TimeRangeField` component composes two [Time Field](/components/time-field) inputs — one for a start time and one for an end time — into a single accessible component. Users navigate between segments with the keyboard, and the combined value is a `TimeRange` object with `start` and `end` properties.
+
+Before using this component, read the [Dates guide](/dates) to understand time-related types from `@internationalized/date`.
+
+## Installation
+
+The `TimeRangeField` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Structure
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField } from "bits-ui";
+</script>
+
+<TimeRangeField.Root>
+  <TimeRangeField.Label>Working hours</TimeRangeField.Label>
+
+  {#each ["start", "end"] as const as type}
+    <TimeRangeField.Input {type}>
+      {#snippet children({ segments })}
+        {#each segments as { part, value }}
+          <TimeRangeField.Segment {part}>
+            {value}
+          </TimeRangeField.Segment>
+        {/each}
+      {/snippet}
+    </TimeRangeField.Input>
+  {/each}
+</TimeRangeField.Root>
+```
+
+## The TimeRange Type
+
+The `value` prop uses the `TimeRange` type exported from `bits-ui`:
+
+```typescript
+import type { TimeRange } from "bits-ui";
+import type { TimeValue } from "bits-ui";
+
+type TimeRange<T extends TimeValue = Time> = {
+  start: T | undefined;
+  end: T | undefined;
+};
+```
+
+The value type is generic — passing `Time` values produces a `TimeRange<Time>`, and so on for `CalendarDateTime` and `ZonedDateTime`.
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeRange } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  let myValue = $state<TimeRange>({
+    start: new Time(9, 0),
+    end: new Time(17, 0),
+  });
+</script>
+
+<button
+  onclick={() => {
+    myValue = {
+      start: myValue.start?.add({ hours: 1 }),
+      end: myValue.end?.add({ hours: 1 }),
+    };
+  }}
+>
+  Add 1 hour
+</button>
+
+<TimeRangeField.Root bind:value={myValue}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeRange } from "bits-ui";
+
+  let myValue = $state<TimeRange | undefined>({
+    start: undefined,
+    end: undefined,
+  });
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: TimeRange | undefined) {
+    myValue = newValue;
+  }
+</script>
+
+<TimeRangeField.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Managing Placeholder State
+
+The `placeholder` prop determines the initial time format and start position when no value is present. Setting it to a `ZonedDateTime` enables timezone display in both inputs.
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  let myPlaceholder = $state(new Time(12, 30));
+</script>
+
+<TimeRangeField.Root bind:placeholder={myPlaceholder}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeValue } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  let myPlaceholder = $state<TimeValue>(new Time(12, 30));
+
+  function getPlaceholder() {
+    return myPlaceholder;
+  }
+
+  function setPlaceholder(newPlaceholder: TimeValue) {
+    myPlaceholder = newPlaceholder;
+  }
+</script>
+
+<TimeRangeField.Root bind:placeholder={getPlaceholder, setPlaceholder}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Using CalendarDateTime or ZonedDateTime
+
+The `TimeRangeField` works with any `TimeValue` type. Use `CalendarDateTime` when you need date context alongside the time:
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeRange } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myValue = $state<TimeRange<CalendarDateTime>>({
+    start: new CalendarDateTime(2024, 8, 3, 9, 0),
+    end: new CalendarDateTime(2024, 8, 3, 17, 0),
+  });
+</script>
+
+<TimeRangeField.Root bind:value={myValue}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Granularity
+
+Control which time segments are rendered in both inputs:
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeRange } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  const value: TimeRange = {
+    start: new Time(9, 0, 0),
+    end: new Time(17, 0, 0),
+  };
+</script>
+
+<!-- Renders: hour / minute / second for each input -->
+<TimeRangeField.Root granularity="second" {value}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Validation
+
+### Min/Max Values
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+</script>
+
+<TimeRangeField.Root minValue={new Time(8, 0)} maxValue={new Time(20, 0)}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+### Custom Validation
+
+```svelte
+<script lang="ts">
+  import { TimeRangeField, type TimeRange, type TimeValue } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  function validate(range: TimeRange) {
+    if (range.start && range.end && range.start.compare(range.end) >= 0) {
+      return "Start time must be before end time";
+    }
+    return undefined;
+  }
+
+  function onInvalid(reason: "min" | "max" | "custom", msg?: string | string[]) {
+    console.error(reason, msg);
+  }
+</script>
+
+<TimeRangeField.Root {validate} {onInvalid}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Hour Cycle
+
+```svelte
+<!-- Force 24-hour display for both inputs -->
+<TimeRangeField.Root hourCycle={24}>
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Localization
+
+```svelte
+<TimeRangeField.Root locale="de">
+  <!-- ... -->
+</TimeRangeField.Root>
+```
+
+## Customization
+
+`TimeRangeField` shares all customization options with `TimeField`. Refer to the [Time Field documentation](/components/time-field) for details on hour cycle, granularity, readonly segments, and validation.
+
+## API Reference
+
+### TimeRangeField.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `TimeRange<T>` | `undefined` | The selected `{ start, end }` time range. Bindable. |
+| `placeholder` | `TimeValue` | `12:00 AM` / `00:00` | Determines field format when empty. Bindable. |
+| `granularity` | `"hour" \| "minute" \| "second"` | `"minute"` | Controls which segments are rendered. |
+| `locale` | `string` | `'en'` | BCP 47 locale string. |
+| `hourCycle` | `12 \| 24` | locale default | 12 or 24-hour time display. |
+| `hideTimeZone` | `boolean` | `false` | Hides the timezone segment. |
+| `minValue` | `TimeValue` | `undefined` | Marks field invalid if start time is before this. |
+| `maxValue` | `TimeValue` | `undefined` | Marks field invalid if end time is after this. |
+| `disabled` | `boolean` | `false` | Disables all interaction. |
+| `readonly` | `boolean` | `false` | Prevents segment editing. |
+| `readonlySegments` | `EditableTimeSegmentPart[]` | `undefined` | Specific segments to make read-only. |
+| `required` | `boolean` | `false` | Makes hidden form inputs required. |
+| `validate` | `(value: TimeRange<T>) => string \| string[] \| undefined` | `undefined` | Custom validation function. |
+| `onInvalid` | `(reason, msg?) => void` | `undefined` | Called when the value is invalid. |
+| `errorMessageId` | `string` | `undefined` | ID of the error message element. |
+| `onValueChange` | `(value: TimeRange<T> \| undefined) => void` | `undefined` | Called when the range changes. |
+| `onPlaceholderChange` | `(value: TimeValue) => void` | `undefined` | Called when the placeholder changes. |
+| `onStartValueChange` | `(value: T \| undefined) => void` | `undefined` | Called when only the start value changes. |
+| `onEndValueChange` | `(value: T \| undefined) => void` | `undefined` | Called when only the end value changes. |
+
+### TimeRangeField.Label
+
+A label element associated with both inputs for accessibility.
+
+### TimeRangeField.Input
+
+Container for one set of time segments. Requires a `type` prop of `"start"` or `"end"`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `type` | `"start" \| "end"` | Which end of the range this input represents. Required. |
+| `name` | `string` | Name for the hidden form input. |
+
+The `children` snippet receives `{ segments: Array<{ part: TimeSegmentPart; value: string }> }`.
+
+### TimeRangeField.Segment
+
+A `<span>` for one time segment. Requires the `part` prop from the segments array.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `part` | `TimeSegmentPart` | The segment identifier (e.g. `"hour"`, `"minute"`, `"literal"`). |
+
+## Further Reading
+
+- [Dates guide](/dates) — time value types, parsing, and formatting
+- [Time Field](/components/time-field) — single time segmented input
+- [Date Range Field](/components/date-range-field) — two date fields for a date range

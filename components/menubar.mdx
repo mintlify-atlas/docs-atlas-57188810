@@ -1,0 +1,442 @@
+---
+title: "Menubar: Horizontal Application Menu Navigation"
+description: "A horizontal bar of labeled menus, each opening a floating panel of actions, modeled after application menu bars in desktop software."
+---
+
+The Menubar component provides a horizontal row of labeled menus — identical in structure to the top-level menu bar found in desktop applications. Each `Menubar.Menu` has its own trigger, floating content panel, and full support for grouped items, checkbox items, radio groups, checkbox groups, and nested submenus. Keyboard navigation follows the roving-focus pattern: arrow keys move between menus in the bar, and Enter or Space opens the focused menu.
+
+## Installation
+
+```typescript
+import { Menubar } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+</script>
+
+<Menubar.Root>
+  <Menubar.Menu>
+    <Menubar.Trigger>File</Menubar.Trigger>
+    <Menubar.Portal>
+      <Menubar.Content>
+        <Menubar.Item>New</Menubar.Item>
+        <Menubar.Item>Open</Menubar.Item>
+        <Menubar.Separator />
+        <Menubar.Item>Quit</Menubar.Item>
+      </Menubar.Content>
+    </Menubar.Portal>
+  </Menubar.Menu>
+
+  <Menubar.Menu>
+    <Menubar.Trigger>Edit</Menubar.Trigger>
+    <Menubar.Portal>
+      <Menubar.Content>
+        <Menubar.Item>Undo</Menubar.Item>
+        <Menubar.Item>Redo</Menubar.Item>
+      </Menubar.Content>
+    </Menubar.Portal>
+  </Menubar.Menu>
+</Menubar.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+</script>
+
+<Menubar.Root>
+  <Menubar.Menu>
+    <Menubar.Trigger />
+    <Menubar.Portal>
+      <Menubar.Content>
+        <Menubar.Group>
+          <Menubar.GroupHeading />
+          <Menubar.Item />
+        </Menubar.Group>
+
+        <Menubar.Item />
+
+        <Menubar.CheckboxItem>
+          {#snippet children({ checked })}
+            {checked ? "✓" : ""}
+          {/snippet}
+        </Menubar.CheckboxItem>
+
+        <Menubar.RadioGroup>
+          <Menubar.GroupHeading />
+          <Menubar.RadioItem>
+            {#snippet children({ checked })}
+              {checked ? "✓" : ""}
+            {/snippet}
+          </Menubar.RadioItem>
+        </Menubar.RadioGroup>
+
+        <Menubar.Sub>
+          <Menubar.SubTrigger />
+          <Menubar.SubContent />
+        </Menubar.Sub>
+
+        <Menubar.Separator />
+        <Menubar.Arrow />
+      </Menubar.Content>
+    </Menubar.Portal>
+  </Menubar.Menu>
+</Menubar.Root>
+```
+
+## Managing value state
+
+The `value` prop on `Menubar.Root` identifies which menu is currently open. Each `Menubar.Menu` can be given a corresponding `value` to allow programmatic control.
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+  let activeMenu = $state("");
+</script>
+
+<button onclick={() => (activeMenu = "file")}>Open File menu</button>
+
+<Menubar.Root bind:value={activeMenu}>
+  <Menubar.Menu value="file">
+    <!-- ... -->
+  </Menubar.Menu>
+  <Menubar.Menu value="edit">
+    <!-- ... -->
+  </Menubar.Menu>
+</Menubar.Root>
+```
+
+### Fully controlled
+
+Use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for explicit control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+  let activeMenu = $state("");
+
+  function getValue() {
+    return activeMenu;
+  }
+
+  function setValue(newValue: string) {
+    activeMenu = newValue;
+  }
+</script>
+
+<Menubar.Root bind:value={getValue, setValue}>
+  <Menubar.Menu value="file"><!-- ... --></Menubar.Menu>
+  <Menubar.Menu value="edit"><!-- ... --></Menubar.Menu>
+</Menubar.Root>
+```
+
+## Radio groups
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+
+  const themes = ["Light", "Dark", "System"];
+  let theme = $state("System");
+</script>
+
+<Menubar.RadioGroup bind:value={theme}>
+  <Menubar.GroupHeading>Theme</Menubar.GroupHeading>
+  {#each themes as t}
+    <Menubar.RadioItem value={t}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {t}
+      {/snippet}
+    </Menubar.RadioItem>
+  {/each}
+</Menubar.RadioGroup>
+```
+
+## Checkbox items
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+
+  let showStatusBar = $state(true);
+</script>
+
+<Menubar.CheckboxItem bind:checked={showStatusBar}>
+  {#snippet children({ checked, indeterminate })}
+    {#if indeterminate}
+      –
+    {:else if checked}
+      ✓
+    {/if}
+    Show Status Bar
+  {/snippet}
+</Menubar.CheckboxItem>
+```
+
+## Checkbox groups
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+
+  let panels = $state<string[]>([]);
+</script>
+
+<Menubar.CheckboxGroup bind:value={panels}>
+  <Menubar.GroupHeading>Show panels</Menubar.GroupHeading>
+  {#each ["Sidebar", "Terminal", "Output"] as panel}
+    <Menubar.CheckboxItem value={panel.toLowerCase()}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {panel}
+      {/snippet}
+    </Menubar.CheckboxItem>
+  {/each}
+</Menubar.CheckboxGroup>
+```
+
+The `value` state does not persist between open/close cycles. Store it in a `$state` variable and pass it to the `value` prop to persist it.
+
+## Nested menus
+
+```svelte
+<Menubar.Content>
+  <Menubar.Item>Item 1</Menubar.Item>
+  <Menubar.Item>Item 2</Menubar.Item>
+  <Menubar.Sub>
+    <Menubar.SubTrigger>More options</Menubar.SubTrigger>
+    <Menubar.SubContent>
+      <Menubar.Item>Sub item 1</Menubar.Item>
+      <Menubar.Item>Sub item 2</Menubar.Item>
+    </Menubar.SubContent>
+  </Menubar.Sub>
+</Menubar.Content>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to integrate Svelte transitions. Spread `wrapperProps` onto a wrapper element and `props` onto the inner content element.
+
+```svelte
+<script lang="ts">
+  import { Menubar } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Menubar.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly={{ y: -8 }}>
+          <Menubar.Item>Item 1</Menubar.Item>
+          <Menubar.Item>Item 2</Menubar.Item>
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</Menubar.Content>
+```
+
+See [Transitions](/transitions) for more details on this pattern.
+
+## Reusable component
+
+```svelte title="MyMenubarMenu.svelte"
+<script lang="ts">
+  import { Menubar, type WithoutChildrenOrChild } from "bits-ui";
+
+  type Props = WithoutChildrenOrChild<Menubar.MenuProps> & {
+    triggerText: string;
+    items: { label: string; value: string; onSelect?: () => void }[];
+    contentProps?: WithoutChildrenOrChild<Menubar.ContentProps>;
+  };
+
+  let { triggerText, items, contentProps, ...restProps }: Props = $props();
+</script>
+
+<Menubar.Menu {...restProps}>
+  <Menubar.Trigger>{triggerText}</Menubar.Trigger>
+  <Menubar.Content {...contentProps}>
+    <Menubar.Group aria-label={triggerText}>
+      {#each items as item}
+        <Menubar.Item textValue={item.label} onSelect={item.onSelect}>
+          {item.label}
+        </Menubar.Item>
+      {/each}
+    </Menubar.Group>
+  </Menubar.Content>
+</Menubar.Menu>
+```
+
+## API Reference
+
+### Root
+
+The container element for the entire menu bar.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | `""` | The value of the currently open menu. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the active menu changes. |
+| `dir` | `"ltr" \| "rtl"` | `"ltr"` | Reading direction of the menubar. |
+| `loop` | `boolean` | `false` | Whether roving focus loops from the last menu back to the first. |
+
+### Menu
+
+Wraps a single menu within the bar, managing its open/closed state.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Unique identifier for this menu, used to control it via `Menubar.Root`'s `value`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when this menu opens or closes. |
+
+### Trigger
+
+The button that opens its parent `Menu` when activated.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean \| null` | `false` | Prevents opening the menu when `true`. |
+
+### Portal
+
+Renders menu content into a different part of the DOM.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| HTMLElement` | `body` | Target element or CSS selector for the portal. |
+
+### Content
+
+The floating panel containing menu items.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `loop` | `boolean` | `false` | Whether keyboard navigation loops at list boundaries. |
+| `forceMount` | `boolean` | `false` | Keep the element in the DOM even when closed. Required for custom transitions. |
+
+When using `forceMount`, the `child` snippet provides `{ wrapperProps, props, open }`. See [child snippet](/child-snippet) docs.
+
+### Item
+
+A basic interactive menu item.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `textValue` | `string` | — | Override text used for typeahead filtering. |
+| `onSelect` | `(event: Event) => void` | — | Callback fired when the item is selected. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+### CheckboxItem
+
+A menu item that behaves as a checkbox (`menuitemcheckbox` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | `false` | Checked state. Supports `bind:checked`. |
+| `onCheckedChange` | `(checked: boolean) => void` | — | Callback fired when checked state changes. |
+| `indeterminate` | `boolean` | `false` | Whether the item is in an indeterminate state. |
+| `onIndeterminateChange` | `(value: boolean) => void` | — | Callback fired when indeterminate state changes. |
+| `value` | `string` | — | Value used when inside a `CheckboxGroup`. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean, indeterminate: boolean }`.
+
+### CheckboxGroup
+
+Groups multiple `CheckboxItem` components with a shared `value` array.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string[]` | `[]` | Array of selected values. Supports `bind:value`. |
+| `onValueChange` | `(value: string[]) => void` | — | Callback fired when the selection changes. |
+
+### RadioGroup
+
+Groups multiple `RadioItem` components as a single-select list.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Value of the selected item. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the selected value changes. |
+
+### RadioItem
+
+A menu item that behaves as a radio button (`menuitemradio` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value this item represents. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean }`.
+
+### Group
+
+A semantic grouping container. Accepts `aria-label` when `GroupHeading` is not used.
+
+### GroupHeading
+
+A visible label for a `Group` or `RadioGroup`. Must be a direct child of one of those components.
+
+### Sub
+
+Manages open state for a nested submenu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | Open state of the submenu. Supports `bind:open`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when open state changes. |
+
+### SubTrigger
+
+The item that opens the nested submenu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents opening the submenu when `true`. |
+| `textValue` | `string` | — | Override text for typeahead. |
+| `openDelay` | `number` | `100` | Delay in ms before the submenu opens on hover. |
+
+### SubContent
+
+The floating panel for a nested submenu. Accepts the same `forceMount` and positioning props as `Content`.
+
+### Separator
+
+A visual divider between groups of items (`separator` role).
+
+### Arrow
+
+An optional arrow element that visually connects the content to the trigger.
+
+## Accessibility
+
+The Menubar follows the [ARIA Menubar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/).
+
+| Key | Behavior |
+|-----|----------|
+| `ArrowLeft` / `ArrowRight` | Moves focus between menus in the bar. |
+| `Enter` / `Space` | Opens the focused menu. |
+| `ArrowDown` | Moves focus to the next item within an open menu. |
+| `ArrowUp` | Moves focus to the previous item within an open menu. |
+| `ArrowRight` | Opens a focused submenu. |
+| `ArrowLeft` | Closes the current submenu. |
+| `Escape` | Closes the open menu and returns focus to the trigger. |
+| `Home` | Moves focus to the first item. |
+| `End` | Moves focus to the last item. |
+| Any printable character | Typeahead navigation within the open menu. |

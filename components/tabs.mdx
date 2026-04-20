@@ -1,0 +1,218 @@
+---
+title: "Tabs: Keyboard-Navigable Tabbed Content Sections"
+description: "Organizes related content into labeled panels, one visible at a time, with full keyboard navigation, orientation control, and manual or automatic activation."
+---
+
+The Tabs component renders a row of trigger buttons — the tab list — and a set of content panels, showing exactly one panel at a time. Navigation between tabs is handled via arrow keys within the tab list. The component supports both horizontal and vertical orientations, automatic activation (the panel changes as focus moves) or manual activation (the user presses Enter/Space to switch panels), and full two-way value binding.
+
+## Installation
+
+```typescript
+import { Tabs } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { Tabs } from "bits-ui";
+</script>
+
+<Tabs.Root value="account">
+  <Tabs.List>
+    <Tabs.Trigger value="account">Account</Tabs.Trigger>
+    <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+    <Tabs.Trigger value="notifications">Notifications</Tabs.Trigger>
+  </Tabs.List>
+
+  <Tabs.Content value="account">
+    <p>Manage your account details here.</p>
+  </Tabs.Content>
+  <Tabs.Content value="settings">
+    <p>Configure application settings here.</p>
+  </Tabs.Content>
+  <Tabs.Content value="notifications">
+    <p>Configure your notification preferences here.</p>
+  </Tabs.Content>
+</Tabs.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { Tabs } from "bits-ui";
+</script>
+
+<Tabs.Root>
+  <Tabs.List>
+    <Tabs.Trigger />
+  </Tabs.List>
+  <Tabs.Content />
+</Tabs.Root>
+```
+
+## Managing value state
+
+The `value` prop on `Tabs.Root` controls which tab is active. Each `Tabs.Trigger` and `Tabs.Content` has a matching `value` prop.
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Tabs } from "bits-ui";
+  let activeTab = $state("account");
+</script>
+
+<button onclick={() => (activeTab = "settings")}>Go to Settings</button>
+
+<Tabs.Root bind:value={activeTab}>
+  <Tabs.List>
+    <Tabs.Trigger value="account">Account</Tabs.Trigger>
+    <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+  </Tabs.List>
+  <Tabs.Content value="account">Account content</Tabs.Content>
+  <Tabs.Content value="settings">Settings content</Tabs.Content>
+</Tabs.Root>
+```
+
+### Fully controlled
+
+Use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for explicit control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Tabs } from "bits-ui";
+  let activeTab = $state("account");
+
+  function getValue() {
+    return activeTab;
+  }
+
+  function setValue(newValue: string) {
+    activeTab = newValue;
+  }
+</script>
+
+<Tabs.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</Tabs.Root>
+```
+
+## Orientation
+
+Set `orientation` to control which arrow keys navigate between tabs.
+
+- `"horizontal"` (default): `ArrowLeft` / `ArrowRight` move between tabs.
+- `"vertical"`: `ArrowUp` / `ArrowDown` move between tabs.
+
+```svelte
+<!-- Horizontal tabs (default) -->
+<Tabs.Root orientation="horizontal">
+  <!-- ... -->
+</Tabs.Root>
+
+<!-- Vertical tabs -->
+<Tabs.Root orientation="vertical">
+  <!-- ... -->
+</Tabs.Root>
+```
+
+## Activation mode
+
+By default (`activationMode="automatic"`), moving focus to a tab trigger immediately activates that tab. Set `activationMode="manual"` to require an explicit press (Enter or Space) to activate.
+
+```svelte
+<Tabs.Root activationMode="manual">
+  <!-- ... -->
+</Tabs.Root>
+```
+
+Manual mode is useful when switching tabs triggers an expensive operation (e.g. a network request) that should not fire just because the user is navigating through the tab list.
+
+## Disabled tabs
+
+Disable individual triggers with the `disabled` prop on `Tabs.Trigger`. You can also disable all triggers at once with `disabled` on `Tabs.Root`.
+
+```svelte
+<!-- Disable a single tab -->
+<Tabs.Root value="account">
+  <Tabs.List>
+    <Tabs.Trigger value="account">Account</Tabs.Trigger>
+    <Tabs.Trigger value="billing" disabled>Billing</Tabs.Trigger>
+  </Tabs.List>
+  <Tabs.Content value="account">Account content</Tabs.Content>
+  <Tabs.Content value="billing">Billing content</Tabs.Content>
+</Tabs.Root>
+
+<!-- Disable all tabs -->
+<Tabs.Root value="account" disabled>
+  <!-- ... -->
+</Tabs.Root>
+```
+
+## Looping
+
+Set `loop={true}` on `Tabs.Root` to allow focus to wrap from the last tab to the first (and vice versa) when navigating with the keyboard.
+
+```svelte
+<Tabs.Root loop>
+  <!-- ... -->
+</Tabs.Root>
+```
+
+## API Reference
+
+### Root
+
+The root element that manages the active tab state and provides context to child components.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | The value of the active tab. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the active tab changes. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Orientation of the tab list. Controls which arrow keys navigate between triggers. |
+| `activationMode` | `"automatic" \| "manual"` | `"automatic"` | Whether the tab activates on focus (`"automatic"`) or requires an explicit press (`"manual"`). |
+| `loop` | `boolean` | `false` | Whether keyboard navigation wraps from the last tab to the first. |
+| `disabled` | `boolean` | `false` | Disables all triggers when `true`. |
+
+### List
+
+The tab list container (`role="tablist"`). Wrap all `Trigger` elements in this component.
+
+### Trigger
+
+A tab button that activates its associated `Content` panel.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value that identifies this trigger and its associated `Content`. |
+| `disabled` | `boolean \| null` | `false` | Disables this specific trigger when `true`. |
+
+### Content
+
+The panel associated with a trigger. Only the panel whose `value` matches `Tabs.Root`'s active `value` is visible.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value that links this content to a `Trigger` of the same value. |
+
+## Accessibility
+
+The Tabs component follows the [ARIA Tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/).
+
+- `Tabs.List` has `role="tablist"`.
+- Each `Tabs.Trigger` has `role="tab"` and `aria-selected` reflecting its active state.
+- Each `Tabs.Content` has `role="tabpanel"` and is linked to its trigger via `aria-labelledby`.
+- Inactive content panels are hidden from the accessibility tree.
+
+| Key | Behavior |
+|-----|----------|
+| `Tab` | Moves focus into the tab list (to the active trigger) and then to the active content panel. |
+| `ArrowLeft` / `ArrowRight` | Moves focus between triggers (horizontal orientation). With `activationMode="automatic"`, also activates the tab. |
+| `ArrowUp` / `ArrowDown` | Moves focus between triggers (vertical orientation). |
+| `Enter` / `Space` | Activates the focused trigger when `activationMode="manual"`. |
+| `Home` | Moves focus to the first trigger. |
+| `End` | Moves focus to the last trigger. |

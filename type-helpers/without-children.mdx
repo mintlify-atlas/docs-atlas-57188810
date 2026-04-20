@@ -1,0 +1,90 @@
+---
+title: "WithoutChildren: Remove children snippet prop from types"
+description: "A type helper that strips the children snippet prop from a component's props type, ideal for wrappers that supply their own fixed child structure."
+---
+
+`WithoutChildren` is a TypeScript type helper that removes the `children` snippet prop from a component's props type. Use it when building wrapper components that render a fixed set of child components internally and should not accept a `children` snippet from the outside.
+
+Removing `children` from the exposed props ensures that your wrapper's internal structure is not accidentally overwritten, and that the TypeScript types accurately reflect what consumers can actually pass.
+
+## Type signature
+
+```ts
+type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "children"> : T;
+```
+
+<ResponseField name="T" type="type parameter">
+  The component props type from which to remove the `children` prop. If `T` does not have a `children` prop, it is returned unchanged.
+</ResponseField>
+
+## Import
+
+```ts
+import type { WithoutChildren } from "bits-ui";
+```
+
+## Usage
+
+### Wrapping a compound component
+
+If you build a pre-composed `Accordion` that always renders its own `Item`, `Header`, `Trigger`, and `Content`, it should not accept a `children` snippet that could replace that structure:
+
+```svelte title="CustomAccordion.svelte"
+<script lang="ts">
+  import { Accordion, type WithoutChildren } from "bits-ui";
+
+  let {
+    value,
+    onValueChange,
+    ...restProps
+  }: WithoutChildren<Accordion.RootProps> = $props();
+</script>
+
+<Accordion.Root {...restProps}>
+  <Accordion.Item {value} {onValueChange}>
+    <Accordion.Header />
+    <Accordion.Trigger />
+    <Accordion.Content />
+  </Accordion.Item>
+</Accordion.Root>
+```
+
+Consumers get all `Accordion.RootProps` (like `type`, `disabled`, and event callbacks) except `children`, which the wrapper controls:
+
+```svelte
+<CustomAccordion value="item-1" type="single" />
+```
+
+### Exposing your own children instead
+
+A common pattern is removing the original `children` from the base type and replacing it with your own typed snippet:
+
+```svelte title="FaqAccordion.svelte"
+<script lang="ts">
+  import { Accordion, type WithoutChildren } from "bits-ui";
+  import type { Snippet } from "svelte";
+
+  type FaqItem = { question: string; answer: string };
+
+  type Props = WithoutChildren<Accordion.RootProps> & {
+    items: FaqItem[];
+  };
+
+  let { items, ...restProps }: Props = $props();
+</script>
+
+<Accordion.Root {...restProps}>
+  {#each items as item}
+    <Accordion.Item value={item.question}>
+      <Accordion.Header>
+        <Accordion.Trigger>{item.question}</Accordion.Trigger>
+      </Accordion.Header>
+      <Accordion.Content>{item.answer}</Accordion.Content>
+    </Accordion.Item>
+  {/each}
+</Accordion.Root>
+```
+
+<Note>
+  `WithoutChildren` only removes the `children` snippet prop. If you also need to remove the `child` render delegation prop, use [`WithoutChildrenOrChild`](/type-helpers/without-children-or-child). If you only need to remove `child`, use [`WithoutChild`](/type-helpers/without-child).
+</Note>

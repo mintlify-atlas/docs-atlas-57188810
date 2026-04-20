@@ -1,0 +1,274 @@
+---
+title: Date Range Field — Segmented Start and End Date Input
+description: A Svelte 5 headless component providing two segmented date inputs for capturing a start and end date range with full keyboard accessibility.
+---
+
+The `DateRangeField` component composes two [Date Field](/components/date-field) inputs — one for a start date and one for an end date — into a single accessible component. Users navigate between segments with the keyboard, and the combined value is a `DateRange` object with `start` and `end` properties.
+
+Before using this component, read the [Dates guide](/dates) to understand `DateValue` and `DateRange` types from `@internationalized/date`.
+
+## Installation
+
+The `DateRangeField` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Structure
+
+```svelte
+<script lang="ts">
+  import { DateRangeField } from "bits-ui";
+</script>
+
+<DateRangeField.Root>
+  <DateRangeField.Label>Check-in / Check-out</DateRangeField.Label>
+
+  {#each ["start", "end"] as const as type}
+    <DateRangeField.Input {type}>
+      {#snippet children({ segments })}
+        {#each segments as { part, value }}
+          <DateRangeField.Segment {part}>
+            {value}
+          </DateRangeField.Segment>
+        {/each}
+      {/snippet}
+    </DateRangeField.Input>
+  {/each}
+</DateRangeField.Root>
+```
+
+## The DateRange Type
+
+The `value` prop uses the `DateRange` type exported from `bits-ui`:
+
+```typescript
+import type { DateRange } from "bits-ui";
+import type { DateValue } from "@internationalized/date";
+
+type DateRange = {
+  start: DateValue | undefined;
+  end: DateValue | undefined;
+};
+```
+
+See the [Dates guide](/dates) for details on `CalendarDate`, `CalendarDateTime`, and `ZonedDateTime`.
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DateRangeField, type DateRange } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myValue = $state<DateRange>({
+    start: new CalendarDateTime(2024, 8, 3, 12, 30),
+    end: new CalendarDateTime(2024, 8, 10, 12, 30),
+  });
+</script>
+
+<button
+  onclick={() => {
+    myValue = {
+      start: myValue.start?.add({ days: 1 }),
+      end: myValue.end?.add({ days: 1 }),
+    };
+  }}
+>
+  Add 1 day
+</button>
+
+<DateRangeField.Root bind:value={myValue}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DateRangeField, type DateRange } from "bits-ui";
+
+  let myValue = $state<DateRange>({
+    start: undefined,
+    end: undefined,
+  });
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: DateRange) {
+    myValue = newValue;
+  }
+</script>
+
+<DateRangeField.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Managing Placeholder State
+
+The `placeholder` prop determines the initial date format and calendar view when no value is present. Setting it to a `CalendarDateTime` enables time segments in both inputs:
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DateRangeField } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myPlaceholder = $state(new CalendarDateTime(2024, 8, 3, 12, 30));
+</script>
+
+<DateRangeField.Root bind:placeholder={myPlaceholder}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DateRangeField } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myPlaceholder = $state(new CalendarDateTime(2024, 8, 3, 12, 30));
+
+  function getPlaceholder() {
+    return myPlaceholder;
+  }
+
+  function setPlaceholder(newPlaceholder: CalendarDateTime) {
+    myPlaceholder = newPlaceholder;
+  }
+</script>
+
+<DateRangeField.Root bind:placeholder={getPlaceholder, setPlaceholder}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Default Values from Strings
+
+```svelte
+<script lang="ts">
+  import { DateRangeField, type DateRange } from "bits-ui";
+  import { parseDate } from "@internationalized/date";
+
+  let value = $state<DateRange>({
+    start: parseDate("2024-08-01"),
+    end: parseDate("2024-08-07"),
+  });
+</script>
+
+<DateRangeField.Root {value}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Granularity
+
+Control which segments appear in both inputs via the `granularity` prop:
+
+```svelte
+<script lang="ts">
+  import { DateRangeField, type DateRange } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let value = $state<DateRange>({
+    start: new CalendarDateTime(2024, 8, 1, 9, 0),
+    end: new CalendarDateTime(2024, 8, 7, 17, 0),
+  });
+</script>
+
+<DateRangeField.Root granularity="minute" {value}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Validation
+
+### Min/Max Values
+
+```svelte
+<script lang="ts">
+  import { DateRangeField } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  const todayDate = today(getLocalTimeZone());
+</script>
+
+<DateRangeField.Root minValue={todayDate}>
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Localization
+
+```svelte
+<DateRangeField.Root locale="fr-FR">
+  <!-- ... -->
+</DateRangeField.Root>
+```
+
+## Customization
+
+`DateRangeField` shares all customization options with `DateField`. Refer to the [Date Field documentation](/components/date-field) for details on granularity, hour cycle, readonly segments, and validation.
+
+## API Reference
+
+### DateRangeField.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `DateRange` | `undefined` | The selected `{ start, end }` range. Bindable. |
+| `placeholder` | `DateValue` | current date | Determines field format when empty. Bindable. |
+| `granularity` | `"day" \| "hour" \| "minute" \| "second"` | `"day"` | Controls which time segments are rendered. |
+| `locale` | `string` | `'en'` | BCP 47 locale string. |
+| `hourCycle` | `12 \| 24` | locale default | 12 or 24-hour time display. |
+| `hideTimeZone` | `boolean` | `false` | Hides the timezone segment. |
+| `minValue` | `DateValue` | `undefined` | Marks field invalid if start date is before this. |
+| `maxValue` | `DateValue` | `undefined` | Marks field invalid if end date is after this. |
+| `disabled` | `boolean` | `false` | Disables all interaction. |
+| `readonly` | `boolean` | `false` | Prevents segment editing. |
+| `readonlySegments` | `EditableSegmentPart[]` | `undefined` | Specific segments to make read-only. |
+| `required` | `boolean` | `false` | Makes hidden form inputs required. |
+| `validate` | `(value: DateRange) => string \| string[] \| undefined` | `undefined` | Custom validation function. |
+| `onInvalid` | `(reason, msg?) => void` | `undefined` | Called when the value is invalid. |
+| `errorMessageId` | `string` | `undefined` | ID of the error message element. |
+| `onValueChange` | `(value: DateRange) => void` | `undefined` | Called when the range changes. |
+| `onPlaceholderChange` | `(value: DateValue) => void` | `undefined` | Called when the placeholder changes. |
+
+### DateRangeField.Label
+
+A label element associated with both inputs for accessibility.
+
+### DateRangeField.Input
+
+Container for one set of segments. Requires a `type` prop of `"start"` or `"end"`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `type` | `"start" \| "end"` | Which end of the range this input represents. Required. |
+| `name` | `string` | Name for the hidden form input. |
+
+The `children` snippet receives `{ segments: Array<{ part: SegmentPart; value: string }> }`.
+
+### DateRangeField.Segment
+
+A `<span>` for one segment within a start or end input. Requires the `part` prop.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `part` | `SegmentPart` | The segment identifier (e.g. `"month"`, `"day"`, `"literal"`). |
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` and `DateRange` types explained
+- [Date Field](/components/date-field) — single date segmented input
+- [Date Range Picker](/components/date-range-picker) — range field combined with a calendar popover

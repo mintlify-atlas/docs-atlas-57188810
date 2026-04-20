@@ -1,0 +1,246 @@
+---
+title: "Slider: Range and Multi-Thumb Value Selector"
+description: A flexible range slider supporting single or multiple thumbs, discrete step arrays, tick marks, tick labels, thumb labels, and vertical orientation.
+---
+
+The Slider component lets users select a numeric value (or range of values) by dragging one or more thumbs along a track. The required `type` prop — `"single"` or `"multiple"` — discriminates the shape of the `value` prop: a plain `number` for single, or `number[]` for multiple. Ticks and tick labels can be rendered via the `children` snippet, and an `onValueCommit` callback fires only when the user releases the thumb.
+
+## Installation
+
+```typescript
+import { Slider } from "bits-ui";
+```
+
+## Usage
+
+### Single thumb
+
+```svelte
+<script lang="ts">
+  import { Slider } from "bits-ui";
+  let volume = $state(50);
+</script>
+
+<Slider.Root type="single" min={0} max={100} step={1} bind:value={volume}>
+  <Slider.Range />
+  <Slider.Thumb index={0} />
+</Slider.Root>
+```
+
+### Multiple thumbs
+
+When `type="multiple"` the `value` prop is `number[]`. The number of thumbs is determined by the length of the array.
+
+```svelte
+<script lang="ts">
+  import { Slider } from "bits-ui";
+  let priceRange = $state([20, 80]);
+</script>
+
+<Slider.Root type="multiple" min={0} max={100} bind:value={priceRange}>
+  {#snippet children({ thumbItems })}
+    <Slider.Range />
+    {#each thumbItems as { index } (index)}
+      <Slider.Thumb {index} />
+    {/each}
+  {/snippet}
+</Slider.Root>
+```
+
+### With ticks and tick labels
+
+```svelte
+<script lang="ts">
+  import { Slider } from "bits-ui";
+</script>
+
+<Slider.Root type="single" min={0} max={10} step={1}>
+  {#snippet children({ tickItems, thumbItems })}
+    <Slider.Range />
+    {#each thumbItems as { index } (index)}
+      <Slider.Thumb {index} />
+    {/each}
+    {#each tickItems as { value, index } (index)}
+      <Slider.Tick {index} />
+      <Slider.TickLabel {index} position="bottom">{value}</Slider.TickLabel>
+    {/each}
+  {/snippet}
+</Slider.Root>
+```
+
+### Thumb labels
+
+```svelte
+<Slider.Root type="multiple" autoSort={false} step={10} value={[10, 50]}>
+  <Slider.Range />
+  <Slider.Thumb index={0} />
+  <Slider.ThumbLabel index={0} position="top">Min</Slider.ThumbLabel>
+  <Slider.Thumb index={1} />
+  <Slider.ThumbLabel index={1} position="top">Max</Slider.ThumbLabel>
+</Slider.Root>
+```
+
+### Reusable component
+
+```svelte title="MySlider.svelte"
+<script lang="ts">
+  import type { ComponentProps } from "svelte";
+  import { Slider } from "bits-ui";
+
+  type Props = Omit<ComponentProps<typeof Slider.Root>, "children">;
+
+  let {
+    value = $bindable(),
+    ref = $bindable(null),
+    ...restProps
+  }: Props = $props();
+</script>
+
+<Slider.Root bind:value bind:ref {...restProps as any}>
+  {#snippet children({ thumbItems, ticks })}
+    <Slider.Range />
+    {#each thumbItems as { index } (index)}
+      <Slider.Thumb {index} />
+    {/each}
+    {#each ticks as index (index)}
+      <Slider.Tick {index} />
+    {/each}
+  {/snippet}
+</Slider.Root>
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Slider } from "bits-ui";
+  let brightness = $state(0);
+</script>
+
+<button onclick={() => (brightness = 20)}>Set to 20</button>
+<Slider.Root type="single" bind:value={brightness}><!-- … --></Slider.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { Slider } from "bits-ui";
+  let brightness = $state(0);
+
+  function getValue() { return brightness; }
+  function setValue(v: number) { brightness = v; }
+</script>
+
+<Slider.Root type="single" bind:value={getValue, setValue}><!-- … --></Slider.Root>
+```
+
+## Value Commit
+
+`onValueCommit` fires once when the user stops dragging, unlike `onValueChange` which fires continuously.
+
+```svelte
+<Slider.Root
+  type="single"
+  onValueCommit={(v) => console.log("committed:", v)}
+>
+  <!-- … -->
+</Slider.Root>
+```
+
+## Discrete Steps
+
+Pass an array to `step` to restrict the slider to specific values.
+
+```svelte
+<Slider.Root type="single" step={[0, 4, 8, 16, 24]}>
+  <!-- … -->
+</Slider.Root>
+```
+
+## Vertical Orientation
+
+```svelte
+<Slider.Root type="single" orientation="vertical">
+  <!-- … -->
+</Slider.Root>
+```
+
+## HTML Forms
+
+The Slider does not render hidden inputs automatically. Manage form submission manually:
+
+```svelte
+<script lang="ts">
+  let price = $state([20, 80]);
+</script>
+
+<form method="POST">
+  <Slider.Root type="multiple" bind:value={price}><!-- … --></Slider.Root>
+  <input type="hidden" name="priceMin" value={price[0]} />
+  <input type="hidden" name="priceMax" value={price[1]} />
+  <button type="submit">Apply filter</button>
+</form>
+```
+
+## API Reference
+
+### `Slider.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | — | **Required.** Discriminates the `value` type. |
+| `value` | `number` (single) or `number[]` (multiple) | `min` / `[]` | Current value(s). Bindable. |
+| `min` | `number` | `0` | Minimum allowed value. |
+| `max` | `number` | `100` | Maximum allowed value. |
+| `step` | `number \| number[]` | `1` | Increment size, or array of discrete snap values. |
+| `disabled` | `boolean` | `false` | Disables all thumbs. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Slider orientation. |
+| `dir` | `"ltr" \| "rtl"` | `"ltr"` | Reading direction. |
+| `autoSort` | `boolean` | `true` | Auto-sort multiple values when thumbs pass each other. |
+| `thumbPositioning` | `"contain" \| "overflow"` | `"contain"` | How thumbs are positioned relative to the track ends. |
+| `trackPadding` | `number` | — | Percentage padding at track edges; SSR-friendly alternative to `thumbPositioning="contain"`. |
+| `onValueChange` | `(v: number \| number[]) => void` | — | Called continuously while dragging. |
+| `onValueCommit` | `(v: number \| number[]) => void` | — | Called once when the user releases the thumb. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable DOM reference. |
+| `children` | `Snippet<[{ tickItems: TickItem[]; thumbItems: ThumbItem[]; ticks: number[]; thumbs: number[] }]>` | — | Render thumbs, range, and ticks. |
+
+### `Slider.Range`
+
+Fills the track between the minimum and the selected value(s). No component-specific props.
+
+### `Slider.Thumb`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `index` | `number` | — | **Required.** Index into the thumbs array from the snippet. |
+| `disabled` | `boolean` | `false` | Disables this specific thumb. |
+
+### `Slider.Tick`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `index` | `number` | — | **Required.** Index into the ticks array from the snippet. |
+
+### `Slider.TickLabel`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `index` | `number` | — | **Required.** Index of the tick this label belongs to. |
+| `position` | `"top" \| "bottom" \| "left" \| "right"` | `"top"` / `"left"` | Label placement relative to the tick. |
+
+### `Slider.ThumbLabel`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `index` | `number` | — | **Required.** Index of the thumb this label belongs to. |
+| `position` | `"top" \| "bottom" \| "left" \| "right"` | `"top"` / `"left"` | Label placement relative to the thumb. |
+
+## Accessibility
+
+- Each thumb renders with `role="slider"` and `aria-valuenow`, `aria-valuemin`, `aria-valuemax`.
+- Keyboard: `ArrowLeft`/`ArrowRight` (or `ArrowUp`/`ArrowDown` for vertical) move by `step`; `Home`/`End` jump to min/max; `PageUp`/`PageDown` move by a larger increment.
+- Provide a visible or `aria-label` description for each thumb, especially in multi-thumb configurations.
+- In RTL layouts set `dir="rtl"` so arrow keys move in the visually correct direction.

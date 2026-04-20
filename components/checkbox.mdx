@@ -1,0 +1,218 @@
+---
+title: "Checkbox: Accessible Tri-State Form Control"
+description: A flexible checkbox primitive supporting checked, unchecked, and indeterminate states with built-in form submission via a hidden input element.
+---
+
+The Checkbox component provides a fully accessible toggle input that can represent three distinct states: checked, unchecked, and indeterminate. It renders a hidden `<input type="checkbox">` for form submission whenever a `name` prop is provided, so it participates in native HTML form workflows without any extra wiring.
+
+## Installation
+
+```typescript
+import { Checkbox } from "bits-ui";
+```
+
+## Usage
+
+### Basic checkbox
+
+The `children` snippet receives `checked` and `indeterminate` booleans so you can render any indicator you like.
+
+```svelte
+<script lang="ts">
+  import { Checkbox } from "bits-ui";
+</script>
+
+<Checkbox.Root>
+  {#snippet children({ checked, indeterminate })}
+    {#if indeterminate}
+      <span>—</span>
+    {:else if checked}
+      <span>✓</span>
+    {:else}
+      <span></span>
+    {/if}
+  {/snippet}
+</Checkbox.Root>
+```
+
+### With a label
+
+Pair with the [`Label`](/components/label) component for accessible labelling.
+
+```svelte
+<script lang="ts">
+  import { Checkbox, Label, useId } from "bits-ui";
+  const id = useId();
+</script>
+
+<Checkbox.Root {id} name="notifications">
+  {#snippet children({ checked })}
+    {checked ? "✓" : ""}
+  {/snippet}
+</Checkbox.Root>
+<Label.Root for={id}>Enable notifications</Label.Root>
+```
+
+### Reusable component
+
+```svelte title="MyCheckbox.svelte"
+<script lang="ts">
+  import {
+    Checkbox,
+    Label,
+    useId,
+    type WithoutChildrenOrChild,
+  } from "bits-ui";
+
+  let {
+    id = useId(),
+    checked = $bindable(false),
+    ref = $bindable(null),
+    labelRef = $bindable(null),
+    labelText,
+    ...restProps
+  }: WithoutChildrenOrChild<Checkbox.RootProps> & {
+    labelText: string;
+    labelRef?: HTMLLabelElement | null;
+  } = $props();
+</script>
+
+<Checkbox.Root {id} bind:checked bind:ref {...restProps}>
+  {#snippet children({ checked, indeterminate })}
+    {#if indeterminate}
+      —
+    {:else if checked}
+      ✓
+    {:else}
+      <span class="empty" />
+    {/if}
+  {/snippet}
+</Checkbox.Root>
+<Label.Root for={id} bind:ref={labelRef}>
+  {labelText}
+</Label.Root>
+```
+
+## Managing Checked State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Checkbox } from "bits-ui";
+  let myChecked = $state(false);
+</script>
+
+<button onclick={() => (myChecked = false)}>Uncheck</button>
+<Checkbox.Root bind:checked={myChecked} />
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control.
+
+```svelte
+<script lang="ts">
+  import { Checkbox } from "bits-ui";
+  let myChecked = $state(false);
+
+  function getChecked() { return myChecked; }
+  function setChecked(v: boolean) { myChecked = v; }
+</script>
+
+<Checkbox.Root bind:checked={getChecked, setChecked} />
+```
+
+## Managing Indeterminate State
+
+```svelte
+<script lang="ts">
+  import { Checkbox } from "bits-ui";
+  let isIndeterminate = $state(true);
+</script>
+
+<Checkbox.Root bind:indeterminate={isIndeterminate} />
+```
+
+## HTML Forms
+
+When `name` is set, a hidden `<input type="checkbox">` is rendered and submitted with the form. The submitted value defaults to `"on"` when checked; pass `value` to override it.
+
+```svelte
+<form method="POST">
+  <Checkbox.Root name="newsletter" value="yes">
+    {#snippet children({ checked })}
+      {checked ? "✓" : ""}
+    {/snippet}
+  </Checkbox.Root>
+  <button type="submit">Subscribe</button>
+</form>
+```
+
+Add `required` to prevent form submission while unchecked.
+
+## Checkbox Groups
+
+Use `Checkbox.Group` to manage multiple related checkboxes under one `name`. The group's `value` is a `string[]` of the checked items' values.
+
+```svelte
+<script lang="ts">
+  import { Checkbox } from "bits-ui";
+  let selected = $state<string[]>([]);
+</script>
+
+<Checkbox.Group name="notifications" bind:value={selected}>
+  <Checkbox.GroupLabel>Notifications</Checkbox.GroupLabel>
+  <Checkbox.Root value="marketing">
+    {#snippet children({ checked })}Marketing{/snippet}
+  </Checkbox.Root>
+  <Checkbox.Root value="promotions">
+    {#snippet children({ checked })}Promotions{/snippet}
+  </Checkbox.Root>
+  <Checkbox.Root value="news">
+    {#snippet children({ checked })}News{/snippet}
+  </Checkbox.Root>
+</Checkbox.Group>
+```
+
+Descendant `Checkbox.Root` components inherit `name`, `disabled`, and `required` from the group.
+
+## API Reference
+
+### `Checkbox.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | `false` | Whether the checkbox is checked. Bindable. |
+| `indeterminate` | `boolean` | `false` | Whether the checkbox is in an indeterminate state. Separate from `checked`. Bindable. |
+| `disabled` | `boolean` | `false` | Prevents user interaction. |
+| `readonly` | `boolean` | `false` | Allows focus but prevents toggling. |
+| `required` | `boolean` | `false` | Applied to the hidden input for form validation. |
+| `name` | `string` | `undefined` | Enables hidden input for form submission. |
+| `value` | `string` | `undefined` | Value submitted with the form. Defaults to `"on"`. |
+| `onCheckedChange` | `(checked: boolean) => void` | — | Callback for checked state changes. |
+| `onIndeterminateChange` | `(v: boolean) => void` | — | Callback for indeterminate state changes. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable DOM reference. |
+| `children` | `Snippet<[{ checked: boolean; indeterminate: boolean }]>` | — | Render the indicator based on state. |
+
+### `Checkbox.Group`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string[]` | `[]` | Array of checked item values. Bindable. |
+| `name` | `string` | `undefined` | Shared form submission name for all child checkboxes. |
+| `disabled` | `boolean` | `false` | Disables all child checkboxes. |
+| `readonly` | `boolean` | `false` | Makes all child checkboxes readonly. |
+| `required` | `boolean` | `false` | Marks all child hidden inputs as required. |
+| `onValueChange` | `(v: string[]) => void` | — | Callback when the group value changes. |
+
+### `Checkbox.GroupLabel`
+
+A `<span>` that labels the group. No special props beyond standard span attributes.
+
+## Accessibility
+
+- Renders with `role="checkbox"` and `aria-checked` (including `"mixed"` for indeterminate).
+- Keyboard: `Space` toggles the checkbox; `Tab` moves focus.
+- Always associate a visible label using `Label.Root` or `aria-label`.
+- The hidden input is visually hidden but participates in the browser's native form validation UI (e.g. required tooltips).

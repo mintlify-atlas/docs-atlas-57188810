@@ -1,0 +1,105 @@
+---
+title: "IsUsingKeyboard: Detect keyboard navigation state"
+description: "A reactive class that tracks whether the user is navigating with a keyboard, enabling keyboard-aware styling and behavior in Svelte 5 components."
+---
+
+`IsUsingKeyboard` is a utility class that tracks whether the user is currently navigating with a keyboard. It listens to `keydown` events to detect keyboard activity and `pointerdown`/`pointermove` events to detect mouse or touch activity. The state is global and shared across all instances, so event listeners are registered only once no matter how many components use it.
+
+Bits UI uses `IsUsingKeyboard` internally to drive focus ring visibility and other keyboard-specific accessibility behaviors.
+
+## Import
+
+```ts
+import { IsUsingKeyboard } from "bits-ui";
+```
+
+## Class API
+
+```ts
+class IsUsingKeyboard {
+  get current(): boolean;
+  set current(value: boolean);
+}
+```
+
+<ResponseField name="current" type="boolean">
+  Reactive getter that returns `true` when the most recent user interaction was a keyboard event, and `false` after any pointer (mouse or touch) event.
+</ResponseField>
+
+## Usage
+
+Instantiate `IsUsingKeyboard` inside a component. The `$effect` registered in the constructor automatically manages the global listener lifecycle — adding listeners on the first instance and removing them when the last instance is destroyed.
+
+```svelte
+<script lang="ts">
+  import { IsUsingKeyboard } from "bits-ui";
+
+  const isUsingKeyboard = new IsUsingKeyboard();
+</script>
+
+<div class:keyboard-focus={isUsingKeyboard.current}>
+  Content with conditional keyboard styling
+</div>
+```
+
+### Keyboard-aware focus rings
+
+A common use case is showing focus rings only during keyboard navigation to avoid the distraction of focus rings on mouse clicks:
+
+```svelte
+<script lang="ts">
+  import { IsUsingKeyboard } from "bits-ui";
+
+  const isUsingKeyboard = new IsUsingKeyboard();
+</script>
+
+<button class={isUsingKeyboard.current ? "focus-visible:ring-2" : "focus:outline-none"}>
+  Click or tab to me
+</button>
+```
+
+### Conditionally rendering UI
+
+Use `isUsingKeyboard.current` in derived state or template expressions to conditionally render keyboard-specific UI:
+
+```svelte
+<script lang="ts">
+  import { IsUsingKeyboard } from "bits-ui";
+
+  const isUsingKeyboard = new IsUsingKeyboard();
+  const showKeyboardHints = $derived(isUsingKeyboard.current);
+</script>
+
+{#if showKeyboardHints}
+  <p class="sr-only">Use arrow keys to navigate</p>
+{/if}
+```
+
+### Multiple instances
+
+You can safely instantiate `IsUsingKeyboard` in multiple components. All instances share a single underlying `$state` variable and a single set of document event listeners:
+
+```svelte
+<!-- ComponentA.svelte -->
+<script lang="ts">
+  import { IsUsingKeyboard } from "bits-ui";
+  const isUsingKeyboard = new IsUsingKeyboard();
+</script>
+```
+
+```svelte
+<!-- ComponentB.svelte -->
+<script lang="ts">
+  import { IsUsingKeyboard } from "bits-ui";
+  // Same global state — no duplicate listeners registered
+  const isUsingKeyboard = new IsUsingKeyboard();
+</script>
+```
+
+<Note>
+  `IsUsingKeyboard` uses reference counting internally. Listeners are attached when the first instance is created and removed when the last one is destroyed. You do not need to manage cleanup manually.
+</Note>
+
+<Tip>
+  Because `current` is backed by Svelte 5 `$state`, it is reactive out of the box. Template expressions, `$derived`, and `$effect` all respond to changes automatically.
+</Tip>

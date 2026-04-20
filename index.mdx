@@ -1,97 +1,132 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Bits UI: Headless Components for Svelte"
+description: "Bits UI is an accessible, unstyled headless component library for Svelte 5. Build high-quality UIs with full creative control and zero style opinions."
 ---
 
-## Setting up
+Bits UI provides 41 fully headless, WAI-ARIA compliant component primitives for Svelte 5. Each component ships completely unstyled so you can bring your own design system — whether that's Tailwind CSS, plain CSS, or any other approach. Every component exposes a `class` prop, state-based `data-*` attributes, and CSS variables so you have complete control.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Get started" icon="rocket" href="/getting-started">
+    Install Bits UI and build your first accessible component in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Browse components" icon="grid-2" href="/components/accordion">
+    Explore all 41 headless primitives — from accordions to tooltips.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Styling guide" icon="paintbrush" href="/styling">
+    Learn how to style components with Tailwind, CSS, data attributes, and CSS variables.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Migration guide" icon="arrows-rotate" href="/migration-guide">
+    Upgrading from Bits UI v0.x? See what changed and how to migrate.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why Bits UI?
 
-Everything you need to create world-class documentation.
+Bits UI is built for developers who want complete control over their component design without sacrificing accessibility or keyboard navigation. Components follow WAI-ARIA patterns out of the box — focus management, screen reader support, and keyboard interactions are all handled for you.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={2}>
+  <Card title="Render delegation" icon="code" href="/child-snippet">
+    Use the `child` snippet to render any element or custom component while keeping full functionality.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="State management" icon="sliders" href="/state-management">
+    Manage component state with Svelte's `bind:` or custom function bindings for fine-grained control.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Transitions & animations" icon="wand-magic-sparkles" href="/transitions">
+    Use Svelte transitions, CSS animations, or any animation library with `forceMount`.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Date & time components" icon="calendar" href="/dates">
+    Locale-aware date pickers and fields powered by `@internationalized/date`.
   </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## Quick install
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CodeGroup>
+```bash npm
+npm install bits-ui
+```
+
+```bash pnpm
+pnpm add bits-ui
+```
+
+```bash yarn
+yarn add bits-ui
+```
+
+```bash bun
+bun add bits-ui
+```
+</CodeGroup>
+
+## A taste of the API
+
+```svelte
+<script lang="ts">
+  import { Accordion } from "bits-ui";
+</script>
+
+<Accordion.Root type="single">
+  <Accordion.Item value="item-1">
+    <Accordion.Header>
+      <Accordion.Trigger class="flex w-full items-center justify-between p-4">
+        What is Bits UI?
+      </Accordion.Trigger>
+    </Accordion.Header>
+    <Accordion.Content class="px-4 pb-4">
+      A headless component library for Svelte 5 that gives you full control
+      over styling while handling accessibility for you.
+    </Accordion.Content>
+  </Accordion.Item>
+</Accordion.Root>
+```
+
+<Tip>
+  Bits UI requires Svelte 5. If you're on Svelte 4, see the [v0 documentation](https://v0.bits-ui.com) or [migrate to v1+](/migration-guide).
+</Tip>
+
+## All components
+
+<CardGroup cols={3}>
+  <Card title="Accordion" href="/components/accordion" icon="chevrons-down-up" />
+  <Card title="Alert Dialog" href="/components/alert-dialog" icon="triangle-exclamation" />
+  <Card title="Aspect Ratio" href="/components/aspect-ratio" icon="crop" />
+  <Card title="Avatar" href="/components/avatar" icon="circle-user" />
+  <Card title="Button" href="/components/button" icon="hand-pointer" />
+  <Card title="Calendar" href="/components/calendar" icon="calendar" />
+  <Card title="Checkbox" href="/components/checkbox" icon="square-check" />
+  <Card title="Collapsible" href="/components/collapsible" icon="square-minus" />
+  <Card title="Combobox" href="/components/combobox" icon="magnifying-glass" />
+  <Card title="Command" href="/components/command" icon="terminal" />
+  <Card title="Context Menu" href="/components/context-menu" icon="bars-staggered" />
+  <Card title="Date Field" href="/components/date-field" icon="input-text" />
+  <Card title="Date Picker" href="/components/date-picker" icon="calendar-days" />
+  <Card title="Date Range Field" href="/components/date-range-field" icon="calendar-range" />
+  <Card title="Date Range Picker" href="/components/date-range-picker" icon="calendar-week" />
+  <Card title="Dialog" href="/components/dialog" icon="window-maximize" />
+  <Card title="Dropdown Menu" href="/components/dropdown-menu" icon="list-dropdown" />
+  <Card title="Label" href="/components/label" icon="tag" />
+  <Card title="Link Preview" href="/components/link-preview" icon="link" />
+  <Card title="Menubar" href="/components/menubar" icon="bars" />
+  <Card title="Meter" href="/components/meter" icon="gauge" />
+  <Card title="Navigation Menu" href="/components/navigation-menu" icon="compass" />
+  <Card title="Pagination" href="/components/pagination" icon="ellipsis" />
+  <Card title="Pin Input" href="/components/pin-input" icon="lock-keyhole" />
+  <Card title="Popover" href="/components/popover" icon="comment" />
+  <Card title="Progress" href="/components/progress" icon="circle-half-stroke" />
+  <Card title="Radio Group" href="/components/radio-group" icon="circle-dot" />
+  <Card title="Range Calendar" href="/components/range-calendar" icon="calendar-check" />
+  <Card title="Rating Group" href="/components/rating-group" icon="star" />
+  <Card title="Scroll Area" href="/components/scroll-area" icon="scroll" />
+  <Card title="Select" href="/components/select" icon="caret-down" />
+  <Card title="Separator" href="/components/separator" icon="minus" />
+  <Card title="Slider" href="/components/slider" icon="sliders" />
+  <Card title="Switch" href="/components/switch" icon="toggle-on" />
+  <Card title="Tabs" href="/components/tabs" icon="table-columns" />
+  <Card title="Time Field" href="/components/time-field" icon="clock" />
+  <Card title="Time Range Field" href="/components/time-range-field" icon="clock-rotate-left" />
+  <Card title="Toggle" href="/components/toggle" icon="power-off" />
+  <Card title="Toggle Group" href="/components/toggle-group" icon="table-cells" />
+  <Card title="Toolbar" href="/components/toolbar" icon="toolbox" />
+  <Card title="Tooltip" href="/components/tooltip" icon="circle-info" />
+</CardGroup>

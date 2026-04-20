@@ -1,0 +1,133 @@
+---
+title: "Meter: Scalar Measurement Within a Known Range"
+description: Displays a static scalar measurement within a defined range — such as CPU usage, battery level, or storage capacity — using the meter ARIA role.
+---
+
+The Meter component represents a known scalar quantity within a defined range — things like battery level, storage usage, or CPU load. Unlike a progress bar, the value can fluctuate in both directions and does not imply advancement toward a goal. For tracking task completion, use the [Progress](/components/progress) component instead.
+
+## Installation
+
+```typescript
+import { Meter } from "bits-ui";
+```
+
+## Usage
+
+### Basic meter
+
+```svelte
+<script lang="ts">
+  import { Meter } from "bits-ui";
+
+  let value = $state(65);
+</script>
+
+<Meter.Root {value} max={100}>
+  <Meter.Indicator />
+</Meter.Root>
+```
+
+### Labeled meter
+
+Combine `Meter.Root` with an accessible label so screen readers can announce both the label and the current value.
+
+```svelte title="MyMeter.svelte"
+<script lang="ts">
+  import { Meter, useId } from "bits-ui";
+  import type { ComponentProps } from "svelte";
+
+  let {
+    max = 100,
+    value = 0,
+    min = 0,
+    label,
+    valueLabel,
+  }: ComponentProps<typeof Meter.Root> & {
+    label: string;
+    valueLabel: string;
+  } = $props();
+
+  const labelId = useId();
+</script>
+
+<div>
+  <span id={labelId}>{label}</span>
+  <span>{valueLabel}</span>
+</div>
+<Meter.Root
+  aria-labelledby={labelId}
+  aria-valuetext={valueLabel}
+  {value}
+  {min}
+  {max}
+/>
+```
+
+Use the reusable component:
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import MyMeter from "$lib/components/MyMeter.svelte";
+
+  let value = $state(3000);
+  const max = 4000;
+</script>
+
+<MyMeter label="Tokens used" valueLabel="{value} / {max}" {value} {max} />
+```
+
+### Styling the indicator width
+
+`Meter.Root` does not inject inline styles on the indicator. Use the `data-value` and `data-max` attributes to derive the fill width in CSS, or pass a custom property on the root:
+
+```svelte
+<script lang="ts">
+  import { Meter } from "bits-ui";
+
+  let value = $state(65);
+  const max = 100;
+</script>
+
+<Meter.Root {value} {max} style="--meter-fill: {(value / max) * 100}%">
+  <Meter.Indicator style="width: var(--meter-fill)" />
+</Meter.Root>
+```
+
+## API Reference
+
+### `Meter.Root`
+
+The outer container. Renders a `<div>` with `role="meter"` and the full set of ARIA value attributes.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `number` | `0` | Current measurement value. |
+| `max` | `number` | `100` | Maximum value of the range. |
+| `min` | `number` | `0` | Minimum value of the range. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root element. |
+| `children` | `Snippet` | — | Should contain `Meter.Indicator`. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-value` | Current numeric value. |
+| `data-max` | The `max` prop value. |
+| `data-min` | The `min` prop value. |
+| `data-meter-root` | Present on the root element. |
+
+### `Meter.Indicator`
+
+A plain `<div>` nested inside the root. Style it with `width`, `height`, or a transform driven by the `data-value` / `data-max` attributes or a CSS custom property you set on the root.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the indicator element. |
+| `children` | `Snippet` | — | Optional content inside the indicator. |
+
+## Accessibility
+
+- If you use a visible label, pass its `id` via `aria-labelledby` on `Meter.Root`.
+- If there is no visible label, add `aria-label` on `Meter.Root`.
+- Assistive technologies often read `aria-valuenow` as a percentage. When a percentage alone is not meaningful, set `aria-valuetext` to a human-friendly string — for example, `aria-valuetext="3,000 of 4,000 tokens used"` or `aria-valuetext="50% (6 hours remaining)"`.

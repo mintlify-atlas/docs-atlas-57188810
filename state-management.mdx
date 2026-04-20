@@ -1,0 +1,78 @@
+---
+title: "State Management in Bits UI: bind: and Function Bindings"
+description: "Manage Bits UI component state with Svelte's bind: or function bindings. Learn two-way binding, conditional updates, and external state integration."
+---
+
+State management is a critical aspect of modern UI development. Bits UI components support multiple approaches to managing component state, giving you flexibility based on your specific needs. Each component's API reference highlights which props are `bindable` — you can replace the `value` prop in the examples below with any bindable prop.
+
+## Two-way binding
+
+The simplest approach is using Svelte's built-in two-way binding with `bind:`:
+
+```svelte
+<script lang="ts">
+  import { ComponentName } from "bits-ui";
+
+  let myValue = $state("default-value");
+</script>
+
+<button onclick={() => (myValue = "new-value")}>Update Value</button>
+
+<ComponentName.Root bind:value={myValue}></ComponentName.Root>
+```
+
+### When to use it
+
+<CardGroup cols={3}>
+  <Card title="Zero boilerplate" icon="bolt">
+    State updates happen automatically — no extra code needed.
+  </Card>
+  <Card title="External controls" icon="sliders">
+    Buttons or other elements that update the state work automatically.
+  </Card>
+  <Card title="Simple use cases" icon="check">
+    Great when you don't need to intercept or transform state changes.
+  </Card>
+</CardGroup>
+
+## Function binding
+
+For complete control over how state is read and written, use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings). This pattern lets you intercept both the getter and the setter:
+
+```svelte
+<script lang="ts">
+  import { ComponentName } from "bits-ui";
+
+  let myValue = $state("default-value");
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: string) {
+    // Only update during business hours
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour >= 9 && hour <= 17) {
+      myValue = newValue;
+    }
+  }
+</script>
+
+<ComponentName.Root bind:value={getValue, setValue}></ComponentName.Root>
+```
+
+When the component tries to set the value from an internal action, it calls the setter. Your setter determines whether the update actually happens.
+
+### When to use it
+
+- Complex state transformation logic
+- Conditional updates based on business rules
+- Debouncing or throttling state changes
+- Maintaining additional state alongside the primary value
+- Integrating with external state systems (e.g., stores or signals)
+
+<Tip>
+  Check each component's API reference for the full list of bindable props. All of them support both the `bind:` shorthand and function binding patterns.
+</Tip>

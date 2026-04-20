@@ -1,0 +1,446 @@
+---
+title: "Tooltip: Accessible Hover Labels for Svelte 5 Components"
+description: "An accessible tooltip for Svelte 5. Requires a Provider wrapper, supports delay, singleton tether patterns, keyboard focus control, and Svelte transitions."
+---
+
+The Tooltip component displays supplementary information when a user hovers over or focuses an interactive element. It requires a `Tooltip.Provider` ancestor and uses [Floating UI](https://floating-ui.com/) for positioning.
+
+## Installation
+
+```bash
+npm install bits-ui
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+</script>
+
+<Tooltip.Provider>
+  <Tooltip.Root>
+    <Tooltip.Trigger>Hover me</Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Content>
+        <Tooltip.Arrow />
+        This is the tooltip content.
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+</Tooltip.Provider>
+```
+
+## Component structure
+
+```svelte
+<Tooltip.Provider>
+  <Tooltip.Root>
+    <Tooltip.Trigger />
+    <Tooltip.Portal>
+      <Tooltip.Content>
+        <Tooltip.Arrow />
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+</Tooltip.Provider>
+```
+
+## Provider
+
+`Tooltip.Provider` is **required** as an ancestor of every `Tooltip.Root`. It provides shared configuration for all tooltips within it and ensures only one tooltip is open at a time.
+
+The recommended approach is to wrap your root layout with the provider:
+
+```svelte title="+layout.svelte"
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  let { children } = $props();
+</script>
+
+<Tooltip.Provider>
+  {@render children()}
+</Tooltip.Provider>
+```
+
+You can set shared defaults on the provider:
+
+```svelte
+<Tooltip.Provider delayDuration={0} disableHoverableContent={true}>
+  <!-- all tooltips in here share these settings -->
+  <Tooltip.Root><!-- ... --></Tooltip.Root>
+  <Tooltip.Root><!-- ... --></Tooltip.Root>
+</Tooltip.Provider>
+```
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open Tooltip</button>
+
+<Tooltip.Root bind:open={isOpen}>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control:
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<Tooltip.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Delay duration
+
+Set how long a user must hover before the tooltip appears using `delayDuration` on `Tooltip.Root` or `Tooltip.Provider`:
+
+```svelte
+<Tooltip.Root delayDuration={200}>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Skip delay duration
+
+`skipDelayDuration` on `Tooltip.Provider` sets a grace period: if the user moves from one trigger to another within this window after closing a tooltip, the next one opens instantly.
+
+```svelte
+<Tooltip.Provider delayDuration={600} skipDelayDuration={200}>
+  <Tooltip.Root><!-- ... --></Tooltip.Root>
+  <Tooltip.Root><!-- ... --></Tooltip.Root>
+</Tooltip.Provider>
+```
+
+This is useful for toolbars and navigation items where users scan across multiple controls.
+
+## Close on trigger click
+
+By default, clicking the trigger closes the tooltip. To disable this:
+
+```svelte
+<Tooltip.Root disableCloseOnTriggerClick>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Hoverable content
+
+By default, the tooltip stays open when the user moves their mouse over the content. To close as soon as the cursor leaves the trigger:
+
+```svelte
+<Tooltip.Root disableHoverableContent>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Non-keyboard focus
+
+To prevent the tooltip from opening when the trigger is focused without using the keyboard:
+
+```svelte
+<Tooltip.Root ignoreNonKeyboardFocus>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Tether — detached triggers and singleton tooltips
+
+`tether` is a shared connection object created with `Tooltip.createTether()`. It lets a `Tooltip.Trigger` and a `Tooltip.Root` communicate even when they are not co-located in the component tree.
+
+### Detached triggers
+
+Use when action controls and tooltip content are in different regions of the page:
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  const actionsTether = Tooltip.createTether<{
+    label: string;
+    description: string;
+    shortcut: string;
+  }>();
+</script>
+
+<Tooltip.Trigger
+  tether={actionsTether}
+  payload={{ label: "Sync now", description: "Refreshes all sources.", shortcut: "S" }}
+>
+  Sync now
+</Tooltip.Trigger>
+
+<Tooltip.Root tether={actionsTether}>
+  {#snippet children({ payload })}
+    <Tooltip.Portal>
+      <Tooltip.Content>
+        <p>{payload?.label}</p>
+        <p>{payload?.description}</p>
+        <kbd>{payload?.shortcut}</kbd>
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  {/snippet}
+</Tooltip.Root>
+```
+
+### Singleton tooltip with payload
+
+A single `Tooltip.Root` can serve multiple triggers. The active trigger's payload is available from the `children` snippet:
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  const boardTether = Tooltip.createTether<{ name: string; description: string }>();
+</script>
+
+<Tooltip.Root tether={boardTether}>
+  {#snippet children({ payload })}
+    <Tooltip.Trigger tether={boardTether} payload={{ name: "Blocked", description: "Waiting on an external dependency." }}>
+      Blocked
+    </Tooltip.Trigger>
+    <Tooltip.Trigger tether={boardTether} payload={{ name: "Done", description: "Ready for release notes." }}>
+      Done
+    </Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Content>
+        <p>{payload?.name}</p>
+        <p>{payload?.description}</p>
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  {/snippet}
+</Tooltip.Root>
+```
+
+### Controlled active trigger
+
+Bind both `open` and `triggerId` to programmatically open the tooltip for a specific trigger — useful for guided onboarding flows:
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  const setupTether = Tooltip.createTether<{ title: string; description: string }>();
+  let open = $state(false);
+  let triggerId = $state<string | null>(null);
+</script>
+
+<button
+  onclick={() => {
+    triggerId = "setup-members";
+    open = true;
+  }}
+>
+  Show members tip
+</button>
+
+<Tooltip.Root tether={setupTether} bind:open bind:triggerId>
+  <!-- ... -->
+</Tooltip.Root>
+```
+
+## Mobile
+
+Tooltips are not supported on mobile devices. There is no hover on touch screens; if a user taps a button with a tooltip, the button's action fires before the tooltip can appear. Use a [Popover](/components/popover) instead for mobile-compatible supplementary information.
+
+## Static positioning
+
+To opt out of Floating UI positioning entirely, use `Tooltip.ContentStatic`:
+
+```svelte
+<Tooltip.Root>
+  <Tooltip.Trigger>Hello</Tooltip.Trigger>
+  <Tooltip.ContentStatic>
+    <!-- position this yourself with CSS -->
+  </Tooltip.ContentStatic>
+</Tooltip.Root>
+```
+
+<Note>
+  `Tooltip.Arrow` is designed for use with `Tooltip.Content` (Floating UI). It will not work correctly with `Tooltip.ContentStatic`.
+</Note>
+
+## Custom anchor
+
+Anchor the tooltip to an element other than the trigger:
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  let customAnchor = $state<HTMLElement>(null!);
+</script>
+
+<div bind:this={customAnchor}></div>
+
+<Tooltip.Root>
+  <Tooltip.Trigger />
+  <Tooltip.Content {customAnchor}>
+    <!-- ... -->
+  </Tooltip.Content>
+</Tooltip.Root>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions. The `child` snippet exposes `wrapperProps`, `props`, and `open`. Spread `wrapperProps` onto the outer element and `props` onto the inner content element.
+
+```svelte
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Tooltip.Root>
+  <Tooltip.Content forceMount>
+    {#snippet child({ wrapperProps, props, open })}
+      {#if open}
+        <div {...wrapperProps}>
+          <div {...props} transition:fly>
+            <!-- tooltip content -->
+          </div>
+        </div>
+      {/if}
+    {/snippet}
+  </Tooltip.Content>
+</Tooltip.Root>
+```
+
+<Note>
+  Floating content components use a two-element structure. `wrapperProps` must go on the outer div for correct Floating UI positioning. See the [child snippet guide](/child-snippet) and [transitions guide](/transitions) for more.
+</Note>
+
+## Reusable component pattern
+
+```svelte title="MyTooltip.svelte"
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  import { type Snippet } from "svelte";
+
+  type Props = Tooltip.RootProps & {
+    trigger: Snippet;
+    triggerProps?: Tooltip.TriggerProps;
+  };
+
+  let {
+    open = $bindable(false),
+    children,
+    trigger,
+    triggerProps = {},
+    ...restProps
+  }: Props = $props();
+</script>
+
+<!--
+  Ensure a Tooltip.Provider wraps your root layout content.
+-->
+<Tooltip.Root bind:open {...restProps}>
+  <Tooltip.Trigger {...triggerProps}>
+    {@render trigger()}
+  </Tooltip.Trigger>
+  <Tooltip.Portal>
+    <Tooltip.Content>
+      <Tooltip.Arrow />
+      {@render children?.()}
+    </Tooltip.Content>
+  </Tooltip.Portal>
+</Tooltip.Root>
+```
+
+## API reference
+
+### Tooltip.Provider
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `delayDuration` | `number` | `700` | Delay in ms before any tooltip in this provider opens. |
+| `skipDelayDuration` | `number` | `300` | Grace period in ms to move between triggers without re-waiting. |
+| `disableHoverableContent` | `boolean` | `false` | Close tooltip when the cursor moves toward the content. |
+| `disableCloseOnTriggerClick` | `boolean` | `false` | Do not close the tooltip when the trigger is clicked. |
+| `disabled` | `boolean` | `false` | Disable all tooltips in this provider. |
+| `ignoreNonKeyboardFocus` | `boolean` | `false` | Only open on keyboard focus, not pointer focus. |
+
+### Tooltip.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the tooltip. |
+| `onOpenChange` | `(open: boolean) => void` | — | Called when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Called when the animation completes. |
+| `delayDuration` | `number` | `700` | Delay in ms before this tooltip opens. Overrides provider. |
+| `disableHoverableContent` | `boolean` | `false` | Close when cursor moves toward content. |
+| `disableCloseOnTriggerClick` | `boolean` | `false` | Do not close on trigger click. |
+| `disabled` | `boolean` | `false` | Disable this tooltip. |
+| `ignoreNonKeyboardFocus` | `boolean` | `false` | Only open on keyboard focus. |
+| `triggerId` | `string \| null` | — | Active trigger ID for controlled singleton mode. |
+| `tether` | `TooltipTether` | — | Shared tether for detached trigger patterns. |
+
+### Tooltip.Trigger
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Disable this trigger. |
+| `payload` | `Payload` | — | Data passed to the root `children` snippet when this trigger is active. |
+| `tether` | `TooltipTether` | — | Shared tether connecting this trigger to a detached root. |
+
+### Tooltip.Portal
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| Element` | `document.body` | Where to portal the content. |
+| `disabled` | `boolean` | `false` | Disable portalling and render inline. |
+
+### Tooltip.Content
+
+`Tooltip.Content` uses Floating UI for positioning. The `child` snippet exposes `wrapperProps`, `props`, and `open`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'top'` | Preferred side relative to the trigger. |
+| `sideOffset` | `number` | `0` | Distance in pixels from the trigger. |
+| `align` | `'start' \| 'center' \| 'end'` | `'center'` | Alignment relative to the trigger. |
+| `alignOffset` | `number` | `0` | Offset from start or end alignment. |
+| `avoidCollisions` | `boolean` | `true` | Override placement to avoid viewport collisions. |
+| `collisionBoundary` | `Element \| Element[]` | — | Elements to check for collisions. |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>` | `8` | Virtual padding around the viewport edge. |
+| `arrowPadding` | `number` | `0` | Padding between arrow and floating element edges. |
+| `customAnchor` | `string \| HTMLElement` | — | Anchor to a different element. |
+| `forceMount` | `boolean` | `false` | Keep content mounted when closed. Use with `child` snippet. |
+| `escapeKeydownBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when Escape is pressed. |
+| `onEscapeKeydown` | `(e: KeyboardEvent) => void` | — | Custom handler for Escape key press. |
+| `interactOutsideBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when interacting outside content. |
+| `onInteractOutside` | `(e: PointerEvent) => void` | — | Custom handler for outside interactions. |
+
+### Tooltip.ContentStatic
+
+Renders tooltip content without Floating UI. Position entirely via CSS.
+
+### Tooltip.Arrow
+
+Renders an SVG arrow pointing toward the trigger. Only works with `Tooltip.Content`, not `Tooltip.ContentStatic`.
+
+## Accessibility
+
+- Follows the [WAI-ARIA Tooltip pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/).
+- `Tooltip.Content` receives `role="tooltip"`.
+- The trigger is linked to the tooltip via `aria-describedby`.
+- Tooltips should only contain non-essential content — never put vital information in a tooltip.
+- Tooltips are not accessible on touch devices. Use Popover for touch-compatible supplementary content.

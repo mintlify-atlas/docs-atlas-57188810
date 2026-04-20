@@ -1,0 +1,225 @@
+---
+title: "BitsConfig: Global defaults for Bits UI components"
+description: "Configure default portal targets, locales, and other options for all Bits UI components within a scope using a single context provider component."
+---
+
+`BitsConfig` is a context provider component that sets default prop values for all Bits UI components rendered within it. Instead of passing the same `to`, `locale`, or other props to every component individually, you configure them once at the layout level and let every descendant inherit them.
+
+Multiple `BitsConfig` instances can be nested. Child instances inherit values from their parent and can selectively override individual options. Component-level props always win over any config value.
+
+## Import
+
+```ts
+import { BitsConfig, getBitsConfig } from "bits-ui";
+```
+
+## BitsConfig props
+
+<ParamField path="defaultPortalTo" type="Element | string">
+  The default `to` target used by all `Portal` sub-components (`Dialog.Portal`, `Tooltip.Portal`, etc.) within this config's scope. Accepts a CSS selector string or a DOM `Element` reference.
+</ParamField>
+
+<ParamField path="defaultLocale" type="string">
+  The default locale string (e.g., `"en"`, `"de"`, `"es"`) used by date and time components within this config's scope.
+</ParamField>
+
+<ParamField path="children" type="Snippet" required>
+  The component tree that inherits these defaults.
+</ParamField>
+
+## getBitsConfig
+
+`getBitsConfig` reads the nearest `BitsConfig` context and returns its resolved options. Returns a default config with all values as `undefined` when called outside any `BitsConfig`.
+
+```ts
+function getBitsConfig(): {
+  defaultPortalTo: ReadableBox<PortalTarget | undefined>;
+  defaultLocale: ReadableBox<string | undefined>;
+}
+```
+
+<ResponseField name="defaultPortalTo" type="ReadableBox<PortalTarget | undefined>">
+  The resolved portal target from the nearest ancestor `BitsConfig`, or `undefined` if none is set.
+</ResponseField>
+
+<ResponseField name="defaultLocale" type="ReadableBox<string | undefined>">
+  The resolved locale string from the nearest ancestor `BitsConfig`, or `undefined` if none is set.
+</ResponseField>
+
+## Value resolution order
+
+Bits UI resolves prop values using this priority (highest to lowest):
+
+1. Direct prop on the component
+2. Nearest parent `BitsConfig`
+3. Inherited from ancestor `BitsConfig` instances
+4. Built-in component default (portals default to `"body"`, locales default to `"en"`)
+
+## Basic usage
+
+Set app-wide defaults at the root layout:
+
+```svelte title="+layout.svelte"
+<script lang="ts">
+  import { BitsConfig } from "bits-ui";
+
+  let { children } = $props();
+</script>
+
+<BitsConfig defaultPortalTo="body" defaultLocale="en">
+  {@render children()}
+</BitsConfig>
+```
+
+With a dynamic locale:
+
+```svelte title="+layout.svelte"
+<script lang="ts">
+  import { BitsConfig } from "bits-ui";
+  import { locale } from "$lib/states/i18n.svelte.js";
+
+  let { children } = $props();
+</script>
+
+<BitsConfig defaultPortalTo="body" defaultLocale={locale.current}>
+  {@render children()}
+</BitsConfig>
+```
+
+## Targeting a custom portal root
+
+Mount a dedicated portal container and point all portalled content to it:
+
+```svelte
+<script lang="ts">
+  import { BitsConfig, Dialog, DateField } from "bits-ui";
+</script>
+
+<div id="modal-root"></div>
+
+<BitsConfig defaultPortalTo="#modal-root" defaultLocale="es">
+  <Dialog.Root>
+    <Dialog.Trigger>Open</Dialog.Trigger>
+    <Dialog.Portal>
+      <!-- Portals to #modal-root -->
+      <Dialog.Content>
+        <Dialog.Title>Title</Dialog.Title>
+        <DateField.Root>
+          <!-- Uses "es" locale -->
+        </DateField.Root>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+</BitsConfig>
+```
+
+## Nesting and overrides
+
+Child `BitsConfig` instances inherit parent values and can override specific keys:
+
+```svelte
+<script lang="ts">
+  import { BitsConfig, Dialog, Tooltip } from "bits-ui";
+</script>
+
+<div id="main-portal"></div>
+<div id="tooltip-portal"></div>
+
+<BitsConfig defaultPortalTo="#main-portal" defaultLocale="de">
+  <!-- Uses #main-portal, "de" locale -->
+  <Dialog.Root>
+    <Dialog.Portal>
+      <Dialog.Content>Main dialog</Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+
+  <BitsConfig defaultPortalTo="#tooltip-portal">
+    <!-- Overrides portal to #tooltip-portal, still inherits "de" locale -->
+    <Tooltip.Root>
+      <Tooltip.Trigger>Hover me</Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content>Tooltip content</Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  </BitsConfig>
+</BitsConfig>
+```
+
+## Theme-specific portal regions
+
+Different parts of the page layout can each have their own portal target:
+
+```svelte
+<script lang="ts">
+  import { BitsConfig } from "bits-ui";
+  import { MyHeader, MySidebar, MyContent } from "$lib/components";
+</script>
+
+<div id="header-portals"></div>
+<div id="sidebar-portals"></div>
+<div id="main-portals"></div>
+
+<header>
+  <BitsConfig defaultPortalTo="#header-portals">
+    <MyHeader />
+  </BitsConfig>
+</header>
+
+<aside>
+  <BitsConfig defaultPortalTo="#sidebar-portals">
+    <MySidebar />
+  </BitsConfig>
+</aside>
+
+<main>
+  <BitsConfig defaultPortalTo="#main-portals">
+    <MyContent />
+  </BitsConfig>
+</main>
+```
+
+## Component-level overrides
+
+Any component can still override the config by passing its own prop directly:
+
+```svelte
+<script lang="ts">
+  import { BitsConfig, Dialog } from "bits-ui";
+</script>
+
+<BitsConfig defaultPortalTo="#main-portal">
+  <!-- Uses #main-portal from config -->
+  <Dialog.Root>
+    <Dialog.Portal>
+      <Dialog.Content>Uses #main-portal</Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+
+  <!-- Overrides the config at the component level -->
+  <Dialog.Root>
+    <Dialog.Portal to="#special-portal">
+      <Dialog.Content>Uses #special-portal</Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+</BitsConfig>
+```
+
+## Reading config in custom components
+
+Use `getBitsConfig` to access the resolved config inside your own components so they participate in the same inheritance chain:
+
+```svelte
+<script lang="ts">
+  import { getBitsConfig, Portal } from "bits-ui";
+
+  const config = getBitsConfig();
+</script>
+
+<Portal to={config.defaultPortalTo.current}>
+  <slot />
+</Portal>
+```
+
+<Tip>
+  Place `BitsConfig` at the root `+layout.svelte` level so all routes share a consistent configuration without repeating props.
+</Tip>

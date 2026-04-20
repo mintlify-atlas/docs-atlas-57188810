@@ -1,0 +1,140 @@
+---
+title: "Transitions and Animations in Bits UI for Svelte 5"
+description: "Learn how to use CSS transitions, Svelte transitions, and any animation library with Bits UI components using forceMount and the child snippet."
+---
+
+Svelte transitions are one of the great features of the framework, but they rely on directives like `in:`, `out:`, and `transition:` — which aren't supported on components directly. Bits UI v1 removes the old `transition*` prop workaround and instead exposes `forceMount` and the `child` snippet so you can use any animation approach: CSS, Svelte transitions, or third-party libraries.
+
+## The defaults
+
+By default, Bits UI handles mounting and unmounting of conditionally rendered components for you. These components wait for transitions to finish before unmounting, so you can safely use CSS transitions or animations without any extra configuration. The component examples in this documentation use [tailwindcss-animate](https://github.com/jamiebuilds/tailwindcss-animate) with this approach.
+
+<Tip>
+  If you just need enter/exit CSS transitions, the default behavior is all you need. See the [styling guide](/styling) for how to use `data-starting-style` and `data-ending-style` for CSS-only enter/exit animations.
+</Tip>
+
+## Force mounting
+
+Every conditionally rendered component exposes a `forceMount` prop. When set to `true`, the component is always mounted in the DOM and visible. Combine this with the `child` snippet to conditionally render the element yourself and apply Svelte transitions.
+
+The `child` snippet receives an `open` prop you can use to conditionally render the element:
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Dialog.Root>
+  <!-- ... -->
+  <Dialog.Content forceMount>
+    {#snippet child({ props, open })}
+      {#if open}
+        <div {...props} transition:fly>
+          <!-- ... -->
+        </div>
+      {/if}
+    {/snippet}
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+The `forceMount` prop tells the component to stay mounted at all times. The `child` snippet takes over rendering, and the `{#if open}` block triggers the Svelte transition on mount and unmount.
+
+## Creating reusable wrapper components
+
+Using `forceMount` and `child` inline on every instance isn't always ideal. You can extract the pattern into a reusable component:
+
+```svelte title="MyDialogContent.svelte"
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { fly } from "svelte/transition";
+  import { Dialog, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    ref = $bindable(null),
+    children,
+    ...restProps
+  }: WithoutChildrenOrChild<Dialog.ContentProps> & {
+    children?: Snippet;
+  } = $props();
+</script>
+
+<Dialog.Content bind:ref {...restProps} forceMount={true}>
+  {#snippet child({ props, open })}
+    {#if open}
+      <div {...props} transition:fly>
+        {@render children?.()}
+      </div>
+    {/if}
+  {/snippet}
+</Dialog.Content>
+```
+
+Use this wrapper alongside the other `Dialog.*` components:
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  import MyDialogContent from "$lib/components/MyDialogContent.svelte";
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger>Open Dialog</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <MyDialogContent>
+      <Dialog.Title>Dialog Title</Dialog.Title>
+      <Dialog.Description>Dialog Description</Dialog.Description>
+      <Dialog.Close>Close</Dialog.Close>
+      <div>Other dialog content</div>
+    </MyDialogContent>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+## Floating content components
+
+`Content` components that rely on Floating UI (popovers, dropdowns, tooltips, etc.) require a slight modification to the `child` snippet structure. You must add a **wrapper element** and spread the `wrapperProps` snippet prop onto it.
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Popover.Root>
+  <Popover.Trigger>Open Popover</Popover.Trigger>
+  <Popover.Portal>
+    <Popover.Content forceMount>
+      {#snippet child({ wrapperProps, props, open })}
+        {#if open}
+          <div {...wrapperProps}>
+            <div {...props} transition:fly>
+              <!-- ... -->
+            </div>
+          </div>
+        {/if}
+      {/snippet}
+    </Popover.Content>
+  </Popover.Portal>
+</Popover.Root>
+```
+
+<Warning>
+  The outer wrapper element with `{...wrapperProps}` must remain unstyled. Floating UI uses it for positioning. All visual styling belongs on the inner content element.
+</Warning>
+
+The following components require this two-level structure:
+
+- `Combobox.Content`
+- `DatePicker.Content`
+- `DateRangePicker.Content`
+- `DropdownMenu.Content`
+- `LinkPreview.Content`
+- `Menubar.Content`
+- `Popover.Content`
+- `Select.Content`
+- `Tooltip.Content`
+
+See the [child snippet guide](/child-snippet) for full documentation on the `child` snippet and `wrapperProps`.

@@ -1,0 +1,175 @@
+---
+title: "Collapsible: Show and hide content in Svelte 5"
+description: "A headless Svelte 5 collapsible component that reveals or hides content sections, with full keyboard support and transition integration."
+---
+
+The Collapsible component provides an expandable and collapsible content section. It is a simpler building block than [Accordion](/components/accordion) — there is no item grouping, just a single open/closed toggle. It is well suited for FAQ entries, filter panels, or any UI where content should be optionally revealed.
+
+## Installation
+
+```svelte
+<script lang="ts">
+  import { Collapsible } from "bits-ui";
+</script>
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { Collapsible } from "bits-ui";
+</script>
+
+<Collapsible.Root>
+  <Collapsible.Trigger>Toggle content</Collapsible.Trigger>
+  <Collapsible.Content>
+    This content is shown when the collapsible is open.
+  </Collapsible.Content>
+</Collapsible.Root>
+```
+
+### Two-way binding
+
+Bind `open` to control or read the expanded state from outside the component.
+
+```svelte
+<script lang="ts">
+  import { Collapsible } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open from outside</button>
+
+<Collapsible.Root bind:open={isOpen}>
+  <Collapsible.Trigger>Toggle</Collapsible.Trigger>
+  <Collapsible.Content>Content here.</Collapsible.Content>
+</Collapsible.Root>
+```
+
+### Fully controlled state
+
+Use Svelte 5 function bindings for complete read/write control over the open state.
+
+```svelte
+<script lang="ts">
+  import { Collapsible } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<Collapsible.Root bind:open={getOpen, setOpen}>
+  <Collapsible.Trigger>Toggle</Collapsible.Trigger>
+  <Collapsible.Content>Content here.</Collapsible.Content>
+</Collapsible.Root>
+```
+
+### Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions to `Collapsible.Content`.
+
+```svelte
+<script lang="ts">
+  import { Collapsible } from "bits-ui";
+  import { fade } from "svelte/transition";
+</script>
+
+<Collapsible.Root>
+  <Collapsible.Trigger>Open</Collapsible.Trigger>
+  <Collapsible.Content forceMount>
+    {#snippet child({ props, open })}
+      {#if open}
+        <div {...props} transition:fade={{ duration: 200 }}>
+          Animated collapsible content.
+        </div>
+      {/if}
+    {/snippet}
+  </Collapsible.Content>
+</Collapsible.Root>
+```
+
+### Hidden until found
+
+Enable `hiddenUntilFound` on `Collapsible.Content` to let the browser's built-in find-in-page (Ctrl+F / Cmd+F) automatically expand collapsed content when matching text is found.
+
+```svelte
+<Collapsible.Root>
+  <Collapsible.Trigger>Show more details</Collapsible.Trigger>
+  <Collapsible.Content hiddenUntilFound>
+    <p>This content is revealed automatically by the browser's find-in-page search.</p>
+  </Collapsible.Content>
+</Collapsible.Root>
+```
+
+## API Reference
+
+### Collapsible.Root
+
+The root container that manages expanded/collapsed state and context.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | Whether the collapsible is expanded. Bindable. |
+| `disabled` | `boolean` | `false` | Prevents the user from toggling the collapsible when `true`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Callback fired after the open state change animation completes. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-state` | `"open"` \| `"closed"` |
+
+### Collapsible.Trigger
+
+The interactive button element that toggles `Collapsible.Content`. Renders a `<button>`.
+
+No component-specific props beyond inherited HTML button attributes.
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-state` | `"open"` \| `"closed"` |
+| `data-disabled` | Present when the collapsible is disabled. |
+
+### Collapsible.Content
+
+The container element whose visibility is toggled.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keeps content in the DOM even when closed. Required when using Svelte transitions. |
+| `hiddenUntilFound` | `boolean` | `false` | Applies `hidden="until-found"` so browsers reveal the content during find-in-page searches. Overrides `forceMount` when `true`. |
+
+**CSS variable**
+
+| Variable | Description |
+|----------|-------------|
+| `--bits-collapsible-content-height` | The current pixel height of the content element, useful for CSS height animations. |
+
+**Child snippet props**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `open` | `boolean` | Whether the collapsible is currently open. |
+
+## Accessibility
+
+The Collapsible follows the [WAI-ARIA Disclosure pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/).
+
+- `Collapsible.Trigger` renders a `<button>` with `aria-expanded` updated automatically.
+- `Collapsible.Content` receives `aria-hidden` when collapsed (unless `hiddenUntilFound` is active).
+
+## Keyboard interactions
+
+| Key | Action |
+|-----|--------|
+| `Enter` / `Space` | Toggles the collapsible open or closed when the trigger is focused. |
+| `Tab` | Moves focus to the next focusable element. |

@@ -1,0 +1,140 @@
+---
+title: "Portal: Render content outside the DOM tree"
+description: "Teleport child content to a different DOM node to prevent z-index and overflow clipping issues caused by complex nested layout contexts."
+---
+
+`Portal` is a utility component that renders its children outside their position in the DOM tree by appending them to a target element — by default, `document.body`. This solves the common problem where `overflow: hidden` or stacking context rules on ancestor elements clip modals, dropdowns, and tooltips.
+
+Every Bits UI component that exposes a `.Portal` sub-component (such as `Dialog.Portal` and `Tooltip.Portal`) uses this same utility internally.
+
+## Import
+
+```ts
+import { Portal } from "bits-ui";
+```
+
+## Props
+
+<ParamField path="to" type="Element | string">
+  The target element or CSS selector string to render the portal content into. Defaults to `document.body`.
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  When `true`, disables portal behavior and renders the content inline at its original position in the DOM.
+</ParamField>
+
+<ParamField path="children" type="Snippet">
+  The content to render inside the portal.
+</ParamField>
+
+## Usage
+
+### Default behavior
+
+Without any props, `Portal` appends its children to `document.body`:
+
+```svelte
+<script lang="ts">
+  import { Portal } from "bits-ui";
+</script>
+
+<Portal>
+  <div>This content is rendered in document.body</div>
+</Portal>
+```
+
+### Custom target element
+
+Use the `to` prop to specify a custom target element or CSS selector:
+
+```svelte
+<script lang="ts">
+  import { Portal } from "bits-ui";
+</script>
+
+<div id="custom-target"></div>
+
+<div>
+  <Portal to="#custom-target">
+    <div>This content is portalled to #custom-target</div>
+  </Portal>
+</div>
+```
+
+You can also pass an `Element` reference directly:
+
+```svelte
+<script lang="ts">
+  import { Portal } from "bits-ui";
+
+  let targetEl: HTMLElement | null = $state(null);
+</script>
+
+<div bind:this={targetEl}></div>
+
+<Portal to={targetEl}>
+  <div>Content rendered inside targetEl</div>
+</Portal>
+```
+
+### Disabling the portal
+
+Set `disabled` to render the content in-place without any teleportation:
+
+```svelte
+<script lang="ts">
+  import { Portal } from "bits-ui";
+
+  let portalEnabled = $state(true);
+</script>
+
+<Portal disabled={!portalEnabled}>
+  <div>Renders inline when portalEnabled is false</div>
+</Portal>
+```
+
+### Using Portal with a dialog
+
+A common pattern is wrapping floating content so it escapes layout constraints:
+
+```svelte
+<script lang="ts">
+  import { Portal } from "bits-ui";
+
+  let open = $state(false);
+</script>
+
+<button onclick={() => (open = true)}>Open dialog</button>
+
+<Portal>
+  {#if open}
+    <div role="dialog" aria-modal="true">
+      <p>Dialog content rendered in body</p>
+      <button onclick={() => (open = false)}>Close</button>
+    </div>
+  {/if}
+</Portal>
+```
+
+## Changing the default target
+
+You can change the default portal target for all `Portal` components within a scope using [`BitsConfig`](/utilities/bits-config):
+
+```svelte
+<script lang="ts">
+  import { BitsConfig, Portal } from "bits-ui";
+</script>
+
+<div id="modal-root"></div>
+
+<BitsConfig defaultPortalTo="#modal-root">
+  <!-- All Portal components here default to #modal-root -->
+  <Portal>
+    <div>Goes to #modal-root instead of body</div>
+  </Portal>
+</BitsConfig>
+```
+
+<Note>
+  The `to` prop on an individual `Portal` always takes precedence over the `defaultPortalTo` set by `BitsConfig`.
+</Note>

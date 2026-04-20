@@ -1,0 +1,76 @@
+---
+title: "Introduction to Bits UI: Headless Components for Svelte"
+description: "Bits UI is a headless component library for Svelte 5 focused on accessibility and full creative control. Unstyled, composable, and fully typed."
+---
+
+Bits UI is a headless component library for Svelte 5 focused on developer experience, accessibility, and full creative control. Use it to build high-quality, accessible UIs without giving up styling freedom or performance. Every component ships completely unstyled — you bring the design; Bits UI handles the behavior.
+
+## Why Bits UI?
+
+<CardGroup cols={2}>
+  <Card title="Bring your own styles" icon="paintbrush">
+    Components ship with no CSS opinions. Use Tailwind, plain CSS, data attributes, or any other approach.
+  </Card>
+  <Card title="Built for developer experience" icon="code">
+    Full TypeScript coverage, stable predictable APIs, a flexible event override system, and great defaults.
+  </Card>
+  <Card title="Production-ready accessibility" icon="universal-access">
+    WAI-ARIA compliance, keyboard navigation, focus management, and screen reader support are all built in.
+  </Card>
+  <Card title="Composable by design" icon="puzzle-piece">
+    Components are primitives, not black boxes. Render delegation, chainable events, and minimal dependencies.
+  </Card>
+</CardGroup>
+
+### Bring your own styles
+
+Most components ship completely unstyled, with the exception of those required for core functionality. No CSS resets, no design system assumptions. You bring the styles using standard `class` props or `data-*` attributes. See the [styling guide](/styling) to learn more.
+
+### Building for developer experience
+
+Everything is designed to stay out of your way:
+
+- Full TypeScript coverage
+- Stable, predictable APIs
+- Flexible event override system
+- Great defaults, easily overridden
+- Comprehensive documentation and examples
+
+### Production-ready accessibility
+
+Accessibility isn't an afterthought — it's baked in:
+
+- WAI-ARIA compliance
+- Keyboard navigation by default
+- Focus management handled for you
+- Screen reader support built-in
+
+### Composable by design
+
+Components are primitives, not black boxes. They compose cleanly and play well together:
+
+- [Render delegation](/child-snippet) for total flexibility
+- Chainable events and callbacks
+- Override-friendly defaults
+- Minimal dependencies
+
+## Community
+
+Bits UI was built and is maintained by [Hunter Johnston](https://x.com/huntabyte) with design support from [Pavel Stianko](https://x.com/pavel_stianko) and his team at [Bitworks Studio](https://bitworks.cz) and tooling support from [Adrian Gonz](https://github.com/AdrianGonz97). Contributions, issues, and feedback are always welcome.
+
+<CardGroup cols={2}>
+  <Card title="Open an issue" icon="bug" href="https://github.com/huntabyte/bits-ui/issues/new">
+    Found a bug? Report it on GitHub.
+  </Card>
+  <Card title="Start a discussion" icon="comments" href="https://github.com/huntabyte/bits-ui/discussions/new?category=feature-requests-ideas">
+    Have a feature request or idea? Let's talk.
+  </Card>
+</CardGroup>
+
+## Acknowledgments
+
+Bits UI is built on the shoulders of giants:
+
+- **[Melt UI](https://melt-ui.com)** — inspired the internal architecture
+- **[Radix UI](https://radix-ui.com)** — API design inspiration
+- **[React Spectrum](https://react-spectrum.adobe.com)** — inspiration for the date/time components and excellence in accessibility

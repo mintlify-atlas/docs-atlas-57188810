@@ -1,0 +1,474 @@
+---
+title: "Dropdown Menu: Trigger-Activated Command Menus"
+description: "A floating menu of selectable items revealed by activating a trigger element, supporting groups, checkboxes, radio items, and nested submenus."
+---
+
+The Dropdown Menu component renders a panel of actions or options that appears when a user activates a trigger element. It supports flat item lists, grouped items with headings, checkbox items, radio groups, checkbox groups, and arbitrarily nested submenus — all with full keyboard navigation and accessibility semantics built in.
+
+## Installation
+
+```typescript
+import { DropdownMenu } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+</script>
+
+<DropdownMenu.Root>
+  <DropdownMenu.Trigger>Open menu</DropdownMenu.Trigger>
+
+  <DropdownMenu.Portal>
+    <DropdownMenu.Content>
+      <DropdownMenu.Group>
+        <DropdownMenu.GroupHeading>File</DropdownMenu.GroupHeading>
+        <DropdownMenu.Item>New</DropdownMenu.Item>
+        <DropdownMenu.Item>Open</DropdownMenu.Item>
+        <DropdownMenu.Item>Save</DropdownMenu.Item>
+      </DropdownMenu.Group>
+
+      <DropdownMenu.Separator />
+
+      <DropdownMenu.Item>Quit</DropdownMenu.Item>
+    </DropdownMenu.Content>
+  </DropdownMenu.Portal>
+</DropdownMenu.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+</script>
+
+<DropdownMenu.Root>
+  <DropdownMenu.Trigger />
+
+  <DropdownMenu.Portal>
+    <DropdownMenu.Content>
+      <DropdownMenu.Group>
+        <DropdownMenu.GroupHeading />
+        <DropdownMenu.Item />
+      </DropdownMenu.Group>
+
+      <DropdownMenu.Item />
+      <DropdownMenu.CheckboxItem />
+
+      <DropdownMenu.RadioGroup>
+        <DropdownMenu.RadioItem />
+      </DropdownMenu.RadioGroup>
+
+      <DropdownMenu.CheckboxGroup>
+        <DropdownMenu.CheckboxItem />
+      </DropdownMenu.CheckboxGroup>
+
+      <DropdownMenu.Sub>
+        <DropdownMenu.SubTrigger />
+        <DropdownMenu.Portal>
+          <DropdownMenu.SubContent />
+        </DropdownMenu.Portal>
+      </DropdownMenu.Sub>
+
+      <DropdownMenu.Separator />
+      <DropdownMenu.Arrow />
+    </DropdownMenu.Content>
+  </DropdownMenu.Portal>
+</DropdownMenu.Root>
+```
+
+## Managing open state
+
+### Two-way binding
+
+Use `bind:open` to synchronize open state with a local variable:
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open menu</button>
+
+<DropdownMenu.Root bind:open={isOpen}>
+  <!-- ... -->
+</DropdownMenu.Root>
+```
+
+### Fully controlled
+
+Use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for explicit control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<DropdownMenu.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</DropdownMenu.Root>
+```
+
+## Groups
+
+Group related items with `DropdownMenu.Group`. Label the group using either a `DropdownMenu.GroupHeading` child or an `aria-label` attribute on the group itself.
+
+```svelte
+<!-- With a visible heading -->
+<DropdownMenu.Group>
+  <DropdownMenu.GroupHeading>File</DropdownMenu.GroupHeading>
+  <DropdownMenu.Item>New</DropdownMenu.Item>
+  <DropdownMenu.Item>Open</DropdownMenu.Item>
+</DropdownMenu.Group>
+
+<!-- With an accessible label, no visible heading -->
+<DropdownMenu.Group aria-label="file">
+  <DropdownMenu.Item>New</DropdownMenu.Item>
+  <DropdownMenu.Item>Open</DropdownMenu.Item>
+</DropdownMenu.Group>
+```
+
+`DropdownMenu.GroupHeading` must be placed inside either a `DropdownMenu.Group` or a `DropdownMenu.RadioGroup`. Using it outside either of these will throw an error in development.
+
+## Radio groups
+
+Combine `DropdownMenu.RadioGroup` and `DropdownMenu.RadioItem` to build a single-select list inside a menu. The `checked` snippet prop reflects whether each item is selected.
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+
+  const sizes = ["Small", "Medium", "Large"];
+  let size = $state("Medium");
+</script>
+
+<DropdownMenu.RadioGroup bind:value={size}>
+  <DropdownMenu.GroupHeading>Size</DropdownMenu.GroupHeading>
+  {#each sizes as s}
+    <DropdownMenu.RadioItem value={s}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {s}
+      {/snippet}
+    </DropdownMenu.RadioItem>
+  {/each}
+</DropdownMenu.RadioGroup>
+```
+
+The `value` state does not persist between open/close cycles. Store it in a `$state` variable and pass it to the `value` prop to persist it.
+
+## Checkbox items
+
+Use `DropdownMenu.CheckboxItem` to create `menuitemcheckbox` elements. The `children` snippet receives both `checked` and `indeterminate` booleans.
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+
+  let notifications = $state(true);
+</script>
+
+<DropdownMenu.CheckboxItem bind:checked={notifications}>
+  {#snippet children({ checked, indeterminate })}
+    {#if indeterminate}
+      –
+    {:else if checked}
+      ✓
+    {/if}
+    Notifications
+  {/snippet}
+</DropdownMenu.CheckboxItem>
+```
+
+## Checkbox groups
+
+`DropdownMenu.CheckboxGroup` wraps multiple `DropdownMenu.CheckboxItem` components and tracks selected values as an array.
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+
+  let colors = $state<string[]>([]);
+</script>
+
+<DropdownMenu.CheckboxGroup bind:value={colors}>
+  <DropdownMenu.GroupHeading>Favorite colors</DropdownMenu.GroupHeading>
+  {#each ["Red", "Green", "Blue"] as color}
+    <DropdownMenu.CheckboxItem value={color.toLowerCase()}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {color}
+      {/snippet}
+    </DropdownMenu.CheckboxItem>
+  {/each}
+</DropdownMenu.CheckboxGroup>
+```
+
+## Nested menus
+
+Use `DropdownMenu.Sub` to nest menus. Each `Sub` contains a `SubTrigger` and a `SubContent`:
+
+```svelte
+<DropdownMenu.Content>
+  <DropdownMenu.Item>Item 1</DropdownMenu.Item>
+  <DropdownMenu.Item>Item 2</DropdownMenu.Item>
+  <DropdownMenu.Sub>
+    <DropdownMenu.SubTrigger>More options</DropdownMenu.SubTrigger>
+    <DropdownMenu.SubContent>
+      <DropdownMenu.Item>Sub item 1</DropdownMenu.Item>
+      <DropdownMenu.Item>Sub item 2</DropdownMenu.Item>
+    </DropdownMenu.SubContent>
+  </DropdownMenu.Sub>
+</DropdownMenu.Content>
+```
+
+## Svelte transitions
+
+Use `forceMount` on `DropdownMenu.Content` together with the `child` snippet to integrate Svelte transitions. The `child` snippet provides `wrapperProps` (required for positioning) and `props` (for the content element itself).
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<DropdownMenu.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly={{ y: -8 }}>
+          <DropdownMenu.Item>Item 1</DropdownMenu.Item>
+          <DropdownMenu.Item>Item 2</DropdownMenu.Item>
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</DropdownMenu.Content>
+```
+
+See [Transitions](/transitions) for more details on this pattern.
+
+## Custom anchor
+
+By default, `DropdownMenu.Content` positions itself relative to the `DropdownMenu.Trigger`. Pass a CSS selector string or an `HTMLElement` to `customAnchor` to anchor it to a different element.
+
+```svelte
+<script lang="ts">
+  import { DropdownMenu } from "bits-ui";
+  let anchor = $state<HTMLElement>(null!);
+</script>
+
+<div bind:this={anchor}></div>
+
+<DropdownMenu.Root>
+  <DropdownMenu.Trigger />
+  <DropdownMenu.Content {customAnchor}>
+    <!-- ... -->
+  </DropdownMenu.Content>
+</DropdownMenu.Root>
+```
+
+## Reusable component
+
+```svelte title="MyDropdownMenu.svelte"
+<script lang="ts">
+  import { DropdownMenu, type WithoutChild } from "bits-ui";
+
+  type Props = DropdownMenu.RootProps & {
+    buttonText: string;
+    items: string[];
+    contentProps?: WithoutChild<DropdownMenu.ContentProps>;
+  };
+
+  let {
+    open = $bindable(false),
+    buttonText,
+    items,
+    contentProps,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<DropdownMenu.Root bind:open {...restProps}>
+  <DropdownMenu.Trigger>{buttonText}</DropdownMenu.Trigger>
+  <DropdownMenu.Portal>
+    <DropdownMenu.Content {...contentProps}>
+      <DropdownMenu.Group aria-label={buttonText}>
+        {#each items as item}
+          <DropdownMenu.Item textValue={item}>{item}</DropdownMenu.Item>
+        {/each}
+      </DropdownMenu.Group>
+    </DropdownMenu.Content>
+  </DropdownMenu.Portal>
+</DropdownMenu.Root>
+```
+
+## API Reference
+
+### Root
+
+The root component that manages open state and context for all child components.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the menu. Supports `bind:open`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Callback fired when the open/close animation completes. |
+| `dir` | `"ltr" \| "rtl"` | `"ltr"` | Reading direction of the menu. |
+
+### Trigger
+
+The button element that opens the menu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean \| null` | `false` | Prevents opening the menu when `true`. |
+
+### Portal
+
+Renders the menu content into a different part of the DOM.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| HTMLElement` | `body` | Target element or CSS selector for the portal. |
+
+### Content
+
+The floating panel containing menu items.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `loop` | `boolean` | `false` | Whether keyboard navigation loops at list boundaries. |
+| `forceMount` | `boolean` | `false` | Keep the element in the DOM even when closed. Required for custom transitions. |
+| `customAnchor` | `string \| HTMLElement` | — | Anchors the content to a different element than the trigger. |
+
+When using `forceMount`, the `child` snippet provides `{ wrapperProps, props, open }`. Spread `wrapperProps` onto a wrapper `<div>` and `props` onto the inner content element. See [child snippet](/child-snippet) docs.
+
+### Item
+
+A basic interactive menu item.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `textValue` | `string` | — | Override text used for typeahead filtering. |
+| `onSelect` | `(event: Event) => void` | — | Callback fired when the item is selected. Call `event.preventDefault()` to cancel. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+### CheckboxItem
+
+A menu item that behaves as a checkbox (`menuitemcheckbox` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | `false` | Checked state. Supports `bind:checked`. |
+| `onCheckedChange` | `(checked: boolean) => void` | — | Callback fired when checked state changes. |
+| `indeterminate` | `boolean` | `false` | Whether the item is in an indeterminate state. |
+| `onIndeterminateChange` | `(value: boolean) => void` | — | Callback fired when indeterminate state changes. |
+| `value` | `string` | — | Value used when this item is part of a `CheckboxGroup`. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean, indeterminate: boolean }`.
+
+### CheckboxGroup
+
+Groups multiple `CheckboxItem` components with a shared `value` array.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string[]` | `[]` | Array of selected values. Supports `bind:value`. |
+| `onValueChange` | `(value: string[]) => void` | — | Callback fired when the selection changes. |
+
+### RadioGroup
+
+Groups multiple `RadioItem` components as a single-select list.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Value of the selected item. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the selected value changes. |
+
+### RadioItem
+
+A menu item that behaves as a radio button (`menuitemradio` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value this item represents. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean }`.
+
+### Group
+
+A semantic grouping container for menu items.
+
+Accepts an `aria-label` attribute when `GroupHeading` is not used.
+
+### GroupHeading
+
+A visible label for a `Group` or `RadioGroup`. Must be a direct child of one of those components.
+
+### Sub
+
+Manages open state for a nested submenu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | Open state of the submenu. Supports `bind:open`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when open state changes. |
+
+### SubTrigger
+
+The item that opens a nested submenu on hover or keyboard activation.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents opening the submenu when `true`. |
+| `textValue` | `string` | — | Override text for typeahead. |
+| `openDelay` | `number` | `100` | Delay in ms before the submenu opens on hover. |
+
+### SubContent
+
+The floating panel for a nested submenu. Accepts the same `forceMount` and positioning props as `Content`.
+
+### Separator
+
+A visual divider between groups of items (`separator` role).
+
+### Arrow
+
+An optional arrow element that visually connects the content to the trigger.
+
+## Accessibility
+
+The Dropdown Menu follows the [ARIA Menu Button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/).
+
+| Key | Behavior |
+|-----|----------|
+| `Enter` / `Space` | Opens the menu or activates the focused item. |
+| `ArrowDown` | Moves focus to the next menu item. |
+| `ArrowUp` | Moves focus to the previous menu item. |
+| `ArrowRight` | Opens a focused submenu. |
+| `ArrowLeft` | Closes the current submenu and returns focus to the trigger. |
+| `Escape` | Closes the menu and returns focus to the trigger. |
+| `Home` | Moves focus to the first item. |
+| `End` | Moves focus to the last item. |
+| Any printable character | Moves focus to the next item whose label starts with that character (typeahead). |

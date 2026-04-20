@@ -1,0 +1,180 @@
+---
+title: "Toggle Group: Single or Multi-Select Toggle Controls"
+description: Groups multiple toggle buttons into a single or multi-select control, with roving keyboard navigation and full state management support.
+---
+
+The Toggle Group component collects several toggle buttons into a coordinated control. The `type` prop determines whether exactly one item or any number of items can be active at once. Keyboard navigation between items uses the arrow keys by default (roving focus).
+
+## Installation
+
+```typescript
+import { ToggleGroup } from "bits-ui";
+```
+
+## Usage
+
+### Basic toggle group
+
+```svelte
+<script lang="ts">
+  import { ToggleGroup } from "bits-ui";
+</script>
+
+<ToggleGroup.Root type="single">
+  <ToggleGroup.Item value="bold">Bold</ToggleGroup.Item>
+  <ToggleGroup.Item value="italic">Italic</ToggleGroup.Item>
+  <ToggleGroup.Item value="underline">Underline</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+### Single vs. multiple selection
+
+When `type="single"`, the `value` prop is a `string` and only one item can be active. When `type="multiple"`, `value` is `string[]` and any number of items can be active simultaneously.
+
+```svelte
+<script lang="ts">
+  import { ToggleGroup } from "bits-ui";
+
+  let singleValue = $state("bold");
+  let multiValue = $state(["bold", "italic"]);
+</script>
+
+<!-- Single selection -->
+<ToggleGroup.Root type="single" bind:value={singleValue}>
+  <ToggleGroup.Item value="bold">Bold</ToggleGroup.Item>
+  <ToggleGroup.Item value="italic">Italic</ToggleGroup.Item>
+</ToggleGroup.Root>
+
+<!-- Multiple selection -->
+<ToggleGroup.Root type="multiple" bind:value={multiValue}>
+  <ToggleGroup.Item value="bold">Bold</ToggleGroup.Item>
+  <ToggleGroup.Item value="italic">Italic</ToggleGroup.Item>
+  <ToggleGroup.Item value="underline">Underline</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+### Managing value state
+
+#### Two-way binding
+
+Use `bind:value` for automatic synchronisation:
+
+```svelte
+<script lang="ts">
+  import { ToggleGroup } from "bits-ui";
+
+  let myValue = $state("");
+</script>
+
+<button onclick={() => (myValue = "bold")}>Select Bold</button>
+
+<ToggleGroup.Root type="single" bind:value={myValue}>
+  <ToggleGroup.Item value="bold">Bold</ToggleGroup.Item>
+  <ToggleGroup.Item value="italic">Italic</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+#### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for full control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { ToggleGroup } from "bits-ui";
+
+  let myValue = $state("");
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: string) {
+    myValue = newValue;
+  }
+</script>
+
+<ToggleGroup.Root type="single" bind:value={getValue, setValue}>
+  <ToggleGroup.Item value="bold">Bold</ToggleGroup.Item>
+  <ToggleGroup.Item value="italic">Italic</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+### Disabled items
+
+You can disable the entire group or individual items:
+
+```svelte
+<!-- Disable the whole group -->
+<ToggleGroup.Root type="single" disabled>
+  <ToggleGroup.Item value="a">A</ToggleGroup.Item>
+  <ToggleGroup.Item value="b">B</ToggleGroup.Item>
+</ToggleGroup.Root>
+
+<!-- Disable a single item -->
+<ToggleGroup.Root type="single">
+  <ToggleGroup.Item value="a">A</ToggleGroup.Item>
+  <ToggleGroup.Item value="b" disabled>B (disabled)</ToggleGroup.Item>
+</ToggleGroup.Root>
+```
+
+## API Reference
+
+### `ToggleGroup.Root`
+
+The container element for the group. Renders a `<div>`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | — | **Required.** Determines whether one or many items can be active. |
+| `value` | `string` (single) or `string[]` (multiple) | `""` / `[]` | The currently active item value(s). Bindable. |
+| `onValueChange` | `(value: string \| string[]) => void` | — | Called when the active value(s) change. |
+| `disabled` | `boolean` | `false` | Disables all items in the group. |
+| `loop` | `boolean` | `true` | Whether arrow-key navigation wraps around at the ends. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Determines which arrow keys move focus between items. |
+| `rovingFocus` | `boolean` | `true` | When `true`, arrow keys navigate between items. When `false`, `Tab` is used instead. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root element. |
+| `children` | `Snippet` | — | Must contain one or more `ToggleGroup.Item` elements. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-orientation` | `"horizontal"` or `"vertical"` |
+| `data-toggle-group-root` | Present on the root element. |
+
+### `ToggleGroup.Item`
+
+An individual toggle button within the group. Renders a `<button>` element.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | **Required.** A unique identifier for this item used when tracking the active selection. |
+| `disabled` | `boolean \| null` | `false` | Disables this item individually. |
+| `ref` | `HTMLButtonElement \| null` | `null` | Bindable reference to the button element. |
+| `children` | `Snippet` | — | Button label or icon content. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+The `children` snippet receives `{ pressed: boolean }` so you can conditionally render content:
+
+```svelte
+<ToggleGroup.Item value="bold">
+  {#snippet children({ pressed })}
+    <span class:font-bold={pressed}>Bold</span>
+  {/snippet}
+</ToggleGroup.Item>
+```
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-state` | `"on"` when active, `"off"` when not active. |
+| `data-disabled` | Present when the item is disabled. |
+| `data-orientation` | Mirrors the group orientation. |
+| `data-toggle-group-item` | Present on each item element. |
+
+## Accessibility
+
+- The root element should have an accessible label. Use `aria-label` or `aria-labelledby` on `ToggleGroup.Root` to describe the group.
+- Each item uses `aria-pressed` to convey its state to screen readers.
+- With `rovingFocus` enabled (the default), only the active item is in the tab order; arrow keys move between items. This follows the [ARIA button group pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/).

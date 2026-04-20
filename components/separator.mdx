@@ -1,0 +1,66 @@
+---
+title: "Separator: Accessible dividers for Svelte layouts"
+description: "A minimal Svelte 5 separator component that renders an accessible horizontal or vertical divider between sections of content or UI elements."
+---
+
+The Separator component renders a thin visual divider between sections of content or groups of UI elements. It can be oriented horizontally or vertically and supports both semantic and decorative modes to work correctly with assistive technologies.
+
+## Installation
+
+```svelte
+<script lang="ts">
+  import { Separator } from "bits-ui";
+</script>
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { Separator } from "bits-ui";
+</script>
+
+<!-- Horizontal divider (default) -->
+<p>Section one content.</p>
+<Separator.Root />
+<p>Section two content.</p>
+```
+
+### Vertical separator
+
+```svelte
+<div style="display: flex; align-items: center; gap: 8px;">
+  <span>Home</span>
+  <Separator.Root orientation="vertical" />
+  <span>About</span>
+  <Separator.Root orientation="vertical" />
+  <span>Contact</span>
+</div>
+```
+
+### Decorative separator
+
+When the separator is purely visual and carries no semantic meaning, set `decorative` to hide it from assistive technologies.
+
+```svelte
+<Separator.Root decorative />
+```
+
+## API Reference
+
+### Separator.Root
+
+The only component in the Separator primitive. Renders a `<div>` styled as a line divider.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Controls whether the divider runs horizontally or vertically. |
+| `decorative` | `boolean` | `false` | When `true`, the separator is hidden from assistive technologies with `aria-hidden="true"` and `role` is omitted. |
+
+All standard HTML `<div>` attributes are also accepted.
+
+## Accessibility
+
+When `decorative` is `false` (the default), `Separator.Root` renders with `role="separator"` and the appropriate `aria-orientation` attribute, making it visible to screen readers as a thematic break between content groups.
+
+Set `decorative={true}` for separators that are used purely for visual spacing and should not be announced to screen reader users.

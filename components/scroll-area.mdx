@@ -1,0 +1,157 @@
+---
+title: "Scroll Area: Custom scrollbars for Svelte 5 apps"
+description: "A headless Svelte 5 scroll area component providing fully styleable custom scrollbars with consistent cross-platform behavior and multiple display modes."
+---
+
+The Scroll Area component replaces the browser's native scrollbars with fully styleable custom ones. It provides consistent cross-platform scroll behavior and supports four visibility modes: `hover`, `scroll`, `auto`, and `always`. The scrollbar thumb, track, and corner are all individually composable so you have complete styling control.
+
+## Installation
+
+```svelte
+<script lang="ts">
+  import { ScrollArea } from "bits-ui";
+</script>
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { ScrollArea } from "bits-ui";
+</script>
+
+<ScrollArea.Root>
+  <ScrollArea.Viewport>
+    <!-- Your scrollable content goes here -->
+    {#each Array(50) as _, i}
+      <p>Item {i + 1}</p>
+    {/each}
+  </ScrollArea.Viewport>
+  <ScrollArea.Scrollbar orientation="vertical">
+    <ScrollArea.Thumb />
+  </ScrollArea.Scrollbar>
+  <ScrollArea.Scrollbar orientation="horizontal">
+    <ScrollArea.Thumb />
+  </ScrollArea.Scrollbar>
+  <ScrollArea.Corner />
+</ScrollArea.Root>
+```
+
+### Scroll area types
+
+The `type` prop on `ScrollArea.Root` controls when scrollbars are visible.
+
+```svelte
+<!-- Only visible on hover (default) -->
+<ScrollArea.Root type="hover"><!-- ... --></ScrollArea.Root>
+
+<!-- Visible while scrolling, like macOS -->
+<ScrollArea.Root type="scroll"><!-- ... --></ScrollArea.Root>
+
+<!-- Always visible when content overflows -->
+<ScrollArea.Root type="auto"><!-- ... --></ScrollArea.Root>
+
+<!-- Always visible regardless of content size -->
+<ScrollArea.Root type="always"><!-- ... --></ScrollArea.Root>
+```
+
+### Custom hide delay
+
+Adjust how long the scrollbars remain visible after the user stops scrolling.
+
+```svelte
+<!-- Hide after 200ms instead of the 600ms default -->
+<ScrollArea.Root scrollHideDelay={200}><!-- ... --></ScrollArea.Root>
+```
+
+### Reusable component
+
+For applications that use scroll areas frequently, a wrapper component reduces repetition.
+
+```svelte title="MyScrollArea.svelte"
+<script lang="ts">
+  import { ScrollArea, type WithoutChild } from "bits-ui";
+
+  type Props = WithoutChild<ScrollArea.RootProps> & {
+    orientation?: "vertical" | "horizontal" | "both";
+    viewportClasses?: string;
+  };
+
+  let {
+    ref = $bindable(null),
+    orientation = "vertical",
+    viewportClasses,
+    children,
+    ...restProps
+  }: Props = $props();
+</script>
+
+{#snippet Scrollbar({ orientation }: { orientation: "vertical" | "horizontal" })}
+  <ScrollArea.Scrollbar {orientation}>
+    <ScrollArea.Thumb />
+  </ScrollArea.Scrollbar>
+{/snippet}
+
+<ScrollArea.Root bind:ref {...restProps}>
+  <ScrollArea.Viewport class={viewportClasses}>
+    {@render children?.()}
+  </ScrollArea.Viewport>
+  {#if orientation === "vertical" || orientation === "both"}
+    {@render Scrollbar({ orientation: "vertical" })}
+  {/if}
+  {#if orientation === "horizontal" || orientation === "both"}
+    {@render Scrollbar({ orientation: "horizontal" })}
+  {/if}
+  <ScrollArea.Corner />
+</ScrollArea.Root>
+```
+
+## API Reference
+
+### ScrollArea.Root
+
+The top-level wrapper that manages scroll area state and context.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"hover" \| "scroll" \| "auto" \| "always"` | `"hover"` | Controls when custom scrollbars are visible. |
+| `dir` | `"ltr" \| "rtl"` | — | Reading direction of the application. |
+| `scrollHideDelay` | `number` | `600` | Milliseconds to wait before hiding scrollbars after the user stops interacting. |
+
+### ScrollArea.Viewport
+
+The inner element that clips content and establishes the scrollable area. Accepts standard HTML `<div>` attributes.
+
+### ScrollArea.Scrollbar
+
+Renders a scrollbar track for the given orientation.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `orientation` | `"horizontal" \| "vertical"` | — | **Required.** The axis this scrollbar controls. |
+| `forceMount` | `boolean` | `false` | Keeps the scrollbar in the DOM even when hidden. Useful with external animation libraries. |
+
+### ScrollArea.Thumb
+
+The draggable thumb inside a `ScrollArea.Scrollbar`. Position and size are calculated automatically from the scroll state.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keeps the thumb in the DOM even when the scrollbar is hidden. |
+
+### ScrollArea.Corner
+
+The small square element rendered at the intersection of a vertical and horizontal scrollbar. Accepts standard HTML `<div>` attributes.
+
+## Accessibility
+
+The Scroll Area renders standard scrollable content. Custom scrollbars are hidden from assistive technologies (`aria-hidden="true"`) since the underlying viewport remains natively scrollable. Users relying on keyboard navigation can scroll the viewport using standard browser scroll keys.
+
+## Keyboard interactions
+
+| Key | Action |
+|-----|--------|
+| `ArrowUp` / `ArrowDown` | Scrolls content vertically. |
+| `ArrowLeft` / `ArrowRight` | Scrolls content horizontally. |
+| `PageUp` / `PageDown` | Scrolls content by one viewport height. |
+| `Home` / `End` | Scrolls to the top or bottom of the content. |

@@ -1,0 +1,123 @@
+---
+title: "WithoutChildrenOrChild: Remove both snippet props from types"
+description: "A type helper that removes both the children and child snippet props from a component's props type for wrappers with fully fixed internal structure."
+---
+
+`WithoutChildrenOrChild` is a TypeScript type helper that removes both the `children` and `child` snippet props from a component's props type in one step. Use it when building wrapper components that fully control their own rendering and must not accept either snippet from consumers.
+
+It is equivalent to applying [`WithoutChildren`](/type-helpers/without-children) and [`WithoutChild`](/type-helpers/without-child) together.
+
+## Type signature
+
+```ts
+type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
+
+// Expands to:
+type WithoutChildrenOrChild<T> = Omit<T, "children" | "child">;
+```
+
+<ResponseField name="T" type="type parameter">
+  The component props type from which to remove both `children` and `child`. Props that have neither are returned unchanged.
+</ResponseField>
+
+## Import
+
+```ts
+import type { WithoutChildrenOrChild } from "bits-ui";
+```
+
+## Usage
+
+### Wrapping a trigger component
+
+If you build an `Accordion.Trigger` wrapper that always renders its own title text, neither `children` nor `child` should be exposed:
+
+```svelte title="CustomAccordionTrigger.svelte"
+<script lang="ts">
+  import { Accordion, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    title,
+    ...restProps
+  }: WithoutChildrenOrChild<Accordion.TriggerProps> & { title: string } = $props();
+</script>
+
+<Accordion.Trigger {...restProps}>
+  {title}
+</Accordion.Trigger>
+```
+
+Consumers can pass any `Accordion.TriggerProps` (like `disabled` or event handlers) plus the required `title`, but cannot pass `children` or `child`:
+
+```svelte
+<CustomAccordionTrigger title="What is Bits UI?" disabled={false} />
+```
+
+### Building a wrapped dialog
+
+A common real-world use case is a `Dialog` wrapper that composes its own trigger, overlay, and content with custom styling:
+
+```svelte title="AppDialog.svelte"
+<script lang="ts">
+  import { Dialog, type WithoutChildrenOrChild } from "bits-ui";
+  import type { Snippet } from "svelte";
+
+  type Props = WithoutChildrenOrChild<Dialog.ContentProps> & {
+    title: string;
+    description?: string;
+    children?: Snippet;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  };
+
+  let {
+    title,
+    description,
+    children,
+    open = $bindable(false),
+    onOpenChange,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<Dialog.Root bind:open {onOpenChange}>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content {...restProps}>
+      <Dialog.Title>{title}</Dialog.Title>
+      {#if description}
+        <Dialog.Description>{description}</Dialog.Description>
+      {/if}
+      {@render children?.()}
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+```svelte
+<AppDialog title="Confirm action" description="This cannot be undone." bind:open>
+  <p>Are you sure you want to proceed?</p>
+</AppDialog>
+```
+
+### Composing with other helpers
+
+`WithoutChildrenOrChild` composes naturally with `WithElementRef` when you also need to expose a `ref` prop:
+
+```ts
+import type { WithoutChildrenOrChild, WithElementRef } from "bits-ui";
+import type { Dialog } from "bits-ui";
+
+type Props = WithElementRef<
+  WithoutChildrenOrChild<Dialog.ContentProps>,
+  HTMLDivElement
+>;
+```
+
+<Tip>
+  When you are unsure which helper to use, prefer `WithoutChildrenOrChild`. It is the most restrictive option and produces the clearest types for wrapper components that render a fully controlled subtree.
+</Tip>
+
+<Note>
+  To learn more about the `child` render delegation pattern and when components expose it, see the [child snippet](/child-snippet) documentation.
+</Note>

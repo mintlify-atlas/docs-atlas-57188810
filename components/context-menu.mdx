@@ -1,0 +1,424 @@
+---
+title: "Context Menu: Right-Click Contextual Action Menus"
+description: "A floating menu of contextual actions revealed by right-clicking a target area, with support for groups, checkboxes, radio items, and submenus."
+---
+
+The Context Menu component displays a panel of contextual actions when the user right-clicks (or long-presses on touch devices) within a designated trigger area. Its structure mirrors the Dropdown Menu — it supports groups, checkbox items, radio groups, checkbox groups, and nested submenus — but it is triggered by a pointer event rather than a button click.
+
+## Installation
+
+```typescript
+import { ContextMenu } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+</script>
+
+<ContextMenu.Root>
+  <ContextMenu.Trigger>
+    <div class="right-click-area">Right-click here</div>
+  </ContextMenu.Trigger>
+
+  <ContextMenu.Portal>
+    <ContextMenu.Content>
+      <ContextMenu.Item>Copy</ContextMenu.Item>
+      <ContextMenu.Item>Paste</ContextMenu.Item>
+      <ContextMenu.Separator />
+      <ContextMenu.Item>Delete</ContextMenu.Item>
+    </ContextMenu.Content>
+  </ContextMenu.Portal>
+</ContextMenu.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+</script>
+
+<ContextMenu.Root>
+  <ContextMenu.Trigger />
+  <ContextMenu.Portal>
+    <ContextMenu.Content>
+      <ContextMenu.Group>
+        <ContextMenu.GroupHeading />
+        <ContextMenu.Item />
+      </ContextMenu.Group>
+
+      <ContextMenu.Item />
+
+      <ContextMenu.CheckboxItem>
+        {#snippet children({ checked })}
+          {checked ? "✓" : ""}
+        {/snippet}
+      </ContextMenu.CheckboxItem>
+
+      <ContextMenu.RadioGroup>
+        <ContextMenu.GroupHeading />
+        <ContextMenu.RadioItem>
+          {#snippet children({ checked })}
+            {checked ? "✓" : ""}
+          {/snippet}
+        </ContextMenu.RadioItem>
+      </ContextMenu.RadioGroup>
+
+      <ContextMenu.Sub>
+        <ContextMenu.SubTrigger />
+        <ContextMenu.SubContent />
+      </ContextMenu.Sub>
+
+      <ContextMenu.Separator />
+      <ContextMenu.Arrow />
+    </ContextMenu.Content>
+  </ContextMenu.Portal>
+</ContextMenu.Root>
+```
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open context menu</button>
+
+<ContextMenu.Root bind:open={isOpen}>
+  <!-- ... -->
+</ContextMenu.Root>
+```
+
+### Fully controlled
+
+Use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for explicit control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<ContextMenu.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</ContextMenu.Root>
+```
+
+## Radio groups
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+
+  const options = ["Option A", "Option B", "Option C"];
+  let selected = $state("Option A");
+</script>
+
+<ContextMenu.RadioGroup bind:value={selected}>
+  {#each options as option}
+    <ContextMenu.RadioItem value={option}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {option}
+      {/snippet}
+    </ContextMenu.RadioItem>
+  {/each}
+</ContextMenu.RadioGroup>
+```
+
+The `value` state does not persist between open/close cycles. Store it in a `$state` variable and pass it to the `value` prop to persist it.
+
+## Checkbox items
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+
+  let notifications = $state(true);
+</script>
+
+<ContextMenu.CheckboxItem bind:checked={notifications}>
+  {#snippet children({ checked, indeterminate })}
+    {#if indeterminate}
+      –
+    {:else if checked}
+      ✓
+    {/if}
+    Notifications
+  {/snippet}
+</ContextMenu.CheckboxItem>
+```
+
+## Checkbox groups
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+
+  let colors = $state<string[]>([]);
+</script>
+
+<ContextMenu.CheckboxGroup bind:value={colors}>
+  <ContextMenu.GroupHeading>Favorite colors</ContextMenu.GroupHeading>
+  {#each ["Red", "Green", "Blue"] as color}
+    <ContextMenu.CheckboxItem value={color.toLowerCase()}>
+      {#snippet children({ checked })}
+        {#if checked}✓{/if}
+        {color}
+      {/snippet}
+    </ContextMenu.CheckboxItem>
+  {/each}
+</ContextMenu.CheckboxGroup>
+```
+
+The `value` state does not persist between open/close cycles. Store it in a `$state` variable and pass it to the `value` prop to persist it.
+
+## Nested menus
+
+```svelte
+<ContextMenu.Content>
+  <ContextMenu.Item>Item 1</ContextMenu.Item>
+  <ContextMenu.Item>Item 2</ContextMenu.Item>
+  <ContextMenu.Sub>
+    <ContextMenu.SubTrigger>More options</ContextMenu.SubTrigger>
+    <ContextMenu.SubContent>
+      <ContextMenu.Item>Sub item 1</ContextMenu.Item>
+      <ContextMenu.Item>Sub item 2</ContextMenu.Item>
+    </ContextMenu.SubContent>
+  </ContextMenu.Sub>
+</ContextMenu.Content>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to integrate Svelte transitions. Spread `wrapperProps` onto a wrapper element and `props` onto the inner content element.
+
+```svelte
+<script lang="ts">
+  import { ContextMenu } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<ContextMenu.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly={{ y: -8 }}>
+          <ContextMenu.Item>Item 1</ContextMenu.Item>
+          <ContextMenu.Item>Item 2</ContextMenu.Item>
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</ContextMenu.Content>
+```
+
+See [Transitions](/transitions) for more details on this pattern.
+
+## Reusable component
+
+```svelte title="CustomContextMenu.svelte"
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { ContextMenu, type WithoutChild } from "bits-ui";
+
+  type Props = ContextMenu.RootProps & {
+    trigger: Snippet;
+    items: string[];
+    contentProps?: WithoutChild<ContextMenu.ContentProps>;
+  };
+
+  let {
+    open = $bindable(false),
+    trigger,
+    items,
+    contentProps,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<ContextMenu.Root bind:open {...restProps}>
+  <ContextMenu.Trigger>
+    {@render trigger()}
+  </ContextMenu.Trigger>
+  <ContextMenu.Portal>
+    <ContextMenu.Content {...contentProps}>
+      <ContextMenu.Group>
+        {#each items as item}
+          <ContextMenu.Item textValue={item}>{item}</ContextMenu.Item>
+        {/each}
+      </ContextMenu.Group>
+    </ContextMenu.Content>
+  </ContextMenu.Portal>
+</ContextMenu.Root>
+```
+
+## API Reference
+
+### Root
+
+The root component that manages open state and context for all child components.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the menu. Supports `bind:open`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Callback fired when the open/close animation completes. |
+| `dir` | `"ltr" \| "rtl"` | `"ltr"` | Reading direction of the menu. |
+
+### Trigger
+
+The area that listens for a right-click (or contextmenu) event to open the menu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | When `true`, right-clicking will not open the menu. |
+
+### Portal
+
+Renders the menu content into a different part of the DOM.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| HTMLElement` | `body` | Target element or CSS selector for the portal. |
+
+### Content
+
+The floating panel that appears at the pointer position.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `loop` | `boolean` | `false` | Whether keyboard navigation loops at list boundaries. |
+| `forceMount` | `boolean` | `false` | Keep the element in the DOM even when closed. Required for custom transitions. |
+
+When using `forceMount`, the `child` snippet provides `{ wrapperProps, props, open }`. See [child snippet](/child-snippet) docs.
+
+### Item
+
+A basic interactive menu item.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `textValue` | `string` | — | Override text used for typeahead filtering. |
+| `onSelect` | `(event: Event) => void` | — | Callback fired when the item is selected. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+### CheckboxItem
+
+A menu item that behaves as a checkbox (`menuitemcheckbox` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `checked` | `boolean` | `false` | Checked state. Supports `bind:checked`. |
+| `onCheckedChange` | `(checked: boolean) => void` | — | Callback fired when checked state changes. |
+| `indeterminate` | `boolean` | `false` | Whether the item is in an indeterminate state. |
+| `onIndeterminateChange` | `(value: boolean) => void` | — | Callback fired when indeterminate state changes. |
+| `value` | `string` | — | Value used when inside a `CheckboxGroup`. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean, indeterminate: boolean }`.
+
+### CheckboxGroup
+
+Groups multiple `CheckboxItem` components with a shared `value` array.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string[]` | `[]` | Array of selected values. Supports `bind:value`. |
+| `onValueChange` | `(value: string[]) => void` | — | Callback fired when the selection changes. |
+
+### RadioGroup
+
+Groups multiple `RadioItem` components as a single-select list.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Value of the selected item. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the selected value changes. |
+
+### RadioItem
+
+A menu item that behaves as a radio button (`menuitemradio` role).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value this item represents. |
+| `disabled` | `boolean` | `false` | Prevents interaction when `true`. |
+| `closeOnSelect` | `boolean` | `true` | Whether the menu closes after selection. |
+
+Children snippet props: `{ checked: boolean }`.
+
+### Group
+
+A semantic grouping container. Accepts `aria-label` when `GroupHeading` is not used.
+
+### GroupHeading
+
+A visible label for a `Group` or `RadioGroup`. Must be a direct child of one of those components.
+
+### Sub
+
+Manages open state for a nested submenu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | Open state of the submenu. Supports `bind:open`. |
+| `onOpenChange` | `(open: boolean) => void` | — | Callback fired when open state changes. |
+
+### SubTrigger
+
+The item that opens the nested submenu.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Prevents opening the submenu when `true`. |
+| `textValue` | `string` | — | Override text for typeahead. |
+| `openDelay` | `number` | `100` | Delay in ms before the submenu opens on hover. |
+
+### SubContent
+
+The floating panel for a nested submenu. Accepts the same `forceMount` and positioning props as `Content`.
+
+### Separator
+
+A visual divider between groups of items (`separator` role).
+
+### Arrow
+
+An optional arrow element that visually connects the content to the pointer position.
+
+## Accessibility
+
+The Context Menu follows the [ARIA Menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu/).
+
+The trigger area has no interactive role itself — the menu opens on a `contextmenu` event. Once open, keyboard navigation mirrors the Dropdown Menu pattern.
+
+| Key | Behavior |
+|-----|----------|
+| `ArrowDown` | Moves focus to the next menu item. |
+| `ArrowUp` | Moves focus to the previous menu item. |
+| `ArrowRight` | Opens a focused submenu. |
+| `ArrowLeft` | Closes the current submenu. |
+| `Escape` | Closes the menu. |
+| `Home` | Moves focus to the first item. |
+| `End` | Moves focus to the last item. |
+| Any printable character | Typeahead navigation to matching items. |

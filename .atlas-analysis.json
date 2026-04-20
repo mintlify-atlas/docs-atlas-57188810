@@ -1,27 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Bits UI",
+  "projectType": "sdk-library",
+  "projectName": "Bits UI",
+  "projectDescription": "A headless, accessible, and unstyled component library for Svelte 5 that provides flexible primitives for building high-quality UI components.",
   "theme": "willow",
-  "colors": {
-    "primary": "#040404",
-    "light": "#6366f1",
-    "dark": "#040404"
-  },
-  "logo": {
-    "light": "https://media.brand.dev/a951b19d-a9a0-4a2a-b998-f1c5a9bf8f23.svg",
-    "dark": "https://media.brand.dev/a951b19d-a9a0-4a2a-b998-f1c5a9bf8f23.svg"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/huntabyte/bits-ui"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/huntabyte/bits-ui"
-    }
-  },
+  "primaryColor": "#040404",
+  "lightColor": null,
+  "darkColor": "#040404",
   "navigation": {
     "tabs": [
       {
@@ -143,5 +127,63 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "41 fully headless, unstyled accessible components for Svelte 5",
+    "WAI-ARIA compliant with built-in keyboard navigation and focus management",
+    "Full TypeScript coverage with comprehensive type definitions",
+    "Render delegation via child snippet for total DOM control",
+    "Flexible state management with two-way binding and function binding",
+    "CSS transitions and animation support with forceMount pattern",
+    "Date and time components powered by @internationalized/date",
+    "CSS variable exposure for dynamic styling based on component state"
+  ],
+  "publicApiSurface": [
+    "Accordion",
+    "AlertDialog",
+    "AspectRatio",
+    "Avatar",
+    "BitsConfig",
+    "Button",
+    "Calendar",
+    "Checkbox",
+    "Collapsible",
+    "Combobox",
+    "Command",
+    "ContextMenu",
+    "DateField",
+    "DatePicker",
+    "DateRangeField",
+    "DateRangePicker",
+    "Dialog",
+    "DropdownMenu",
+    "Label",
+    "LinkPreview",
+    "Menubar",
+    "Meter",
+    "NavigationMenu",
+    "Pagination",
+    "PinInput",
+    "Popover",
+    "Progress",
+    "RadioGroup",
+    "RangeCalendar",
+    "RatingGroup",
+    "ScrollArea",
+    "Select",
+    "Separator",
+    "Slider",
+    "Switch",
+    "Tabs",
+    "TimeField",
+    "TimeRangeField",
+    "Toggle",
+    "ToggleGroup",
+    "Toolbar",
+    "Tooltip",
+    "Portal",
+    "IsUsingKeyboard",
+    "computeCommandScore",
+    "getBitsConfig"
+  ]
 }

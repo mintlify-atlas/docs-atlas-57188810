@@ -1,0 +1,148 @@
+---
+title: "Progress: Task Completion Bar with Indeterminate State"
+description: Displays the completion status of a task as a progress bar, with built-in support for indeterminate state when the total is unknown.
+---
+
+The Progress component communicates how far along a task is. When the current `value` is `null`, the bar enters an indeterminate state — useful for operations where the total duration is unknown. For displaying a static measurement rather than task completion, see the [Meter](/components/meter) component instead.
+
+## Installation
+
+```typescript
+import { Progress } from "bits-ui";
+```
+
+## Usage
+
+### Basic progress bar
+
+```svelte
+<script lang="ts">
+  import { Progress } from "bits-ui";
+
+  let value = $state(40);
+</script>
+
+<Progress.Root {value} max={100}>
+  <Progress.Indicator />
+</Progress.Root>
+```
+
+### Labeled progress bar
+
+Pair `Progress.Root` with an accessible label so screen readers can announce both the label and the current value.
+
+```svelte title="MyProgress.svelte"
+<script lang="ts">
+  import { Progress, useId } from "bits-ui";
+  import type { ComponentProps } from "svelte";
+
+  let {
+    max = 100,
+    value = 0,
+    min = 0,
+    label,
+    valueLabel,
+  }: ComponentProps<typeof Progress.Root> & {
+    label: string;
+    valueLabel: string;
+  } = $props();
+
+  const labelId = useId();
+</script>
+
+<div>
+  <span id={labelId}>{label}</span>
+  <span>{valueLabel}</span>
+</div>
+<Progress.Root
+  aria-labelledby={labelId}
+  aria-valuetext={valueLabel}
+  {value}
+  {min}
+  {max}
+/>
+```
+
+Use the reusable component:
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import MyProgress from "$lib/components/MyProgress.svelte";
+
+  let value = $state(50);
+</script>
+
+<MyProgress label="Loading images..." valueLabel="{value}%" {value} />
+```
+
+### Indeterminate state
+
+Pass `value={null}` when the total duration is unknown. The root element receives `data-state="indeterminate"` and `data-indeterminate=""`, which you can target with CSS to animate the bar.
+
+```svelte
+<script lang="ts">
+  import { Progress } from "bits-ui";
+</script>
+
+<Progress.Root value={null}>
+  <Progress.Indicator />
+</Progress.Root>
+```
+
+### Styling the indicator width
+
+`Progress.Root` does not inject inline styles on the indicator automatically. Use the `data-value`, `data-max`, and `data-min` attributes together with CSS — or set a custom property yourself — to drive the indicator width:
+
+```svelte
+<script lang="ts">
+  import { Progress } from "bits-ui";
+
+  let value = $state(65);
+  const max = 100;
+</script>
+
+<Progress.Root {value} {max} style="--progress: {((value ?? 0) / max) * 100}%">
+  <Progress.Indicator style="width: var(--progress)" />
+</Progress.Root>
+```
+
+## API Reference
+
+### `Progress.Root`
+
+The outer container. Renders a `<div>` with `role="progressbar"` and the full set of ARIA value attributes.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `number \| null` | `0` | Current progress value. Pass `null` for indeterminate state. |
+| `max` | `number` | `100` | Maximum value of the progress bar. |
+| `min` | `number` | `0` | Minimum value of the progress bar. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root element. |
+| `children` | `Snippet` | — | Should contain `Progress.Indicator`. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-state` | `"loading"`, `"loaded"`, `"indeterminate"` |
+| `data-value` | Current numeric value, or absent when indeterminate. |
+| `data-max` | The `max` prop value. |
+| `data-min` | The `min` prop value. |
+| `data-indeterminate` | Present (empty string) when `value` is `null`. |
+| `data-progress-root` | Present on the root element. |
+
+### `Progress.Indicator`
+
+A plain `<div>` nested inside the root. Style it with a `width` or `transform: scaleX()` driven by the `data-value` / `data-max` attributes or a CSS custom property you set on the root.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the indicator element. |
+| `children` | `Snippet` | — | Optional content inside the indicator. |
+
+## Accessibility
+
+- If you use a visible label, pass the label element's `id` via `aria-labelledby` on `Progress.Root`.
+- If there is no visible label, add `aria-label` to `Progress.Root` with a descriptive string.
+- When the value is a percentage, the default `aria-valuenow` conveys it numerically. If a richer description is helpful (e.g., "3 of 5 steps complete"), set `aria-valuetext` accordingly.

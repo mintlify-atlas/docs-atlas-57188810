@@ -1,0 +1,385 @@
+---
+title: "Command: Keyboard-Driven Command Palette Interface"
+description: A composable command palette with fuzzy search filtering, keyboard navigation, grouped items, empty and loading states, and an imperative API.
+---
+
+The Command component implements the ⌘K-style command palette pattern: a search input filters a scrollable list of items in real time, and the user can navigate and select entirely by keyboard. It can be placed inline or composed inside a [Dialog](/components/dialog) for a modal experience.
+
+## Installation
+
+```typescript
+import { Command } from "bits-ui";
+```
+
+## Usage
+
+### Basic command menu
+
+```svelte
+<script lang="ts">
+  import { Command } from "bits-ui";
+</script>
+
+<Command.Root>
+  <Command.Input placeholder="Type a command…" />
+  <Command.List>
+    <Command.Viewport>
+      <Command.Empty>No results found.</Command.Empty>
+      <Command.Group>
+        <Command.GroupHeading>Actions</Command.GroupHeading>
+        <Command.GroupItems>
+          <Command.Item value="new-file" onSelect={() => console.log("New file")}>
+            New file
+          </Command.Item>
+          <Command.Item value="open-settings" onSelect={() => console.log("Settings")}>
+            Open settings
+          </Command.Item>
+        </Command.GroupItems>
+      </Command.Group>
+    </Command.Viewport>
+  </Command.List>
+</Command.Root>
+```
+
+### In a modal dialog
+
+Combine `Command` with `Dialog` to display the palette in a modal. Trigger it with a keyboard shortcut such as `⌘K`.
+
+```svelte
+<script lang="ts">
+  import { Command, Dialog } from "bits-ui";
+
+  let open = $state(false);
+</script>
+
+<svelte:window
+  onkeydown={(e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      open = true;
+    }
+  }}
+/>
+
+<Dialog.Root bind:open>
+  <Dialog.Content>
+    <Command.Root>
+      <Command.Input placeholder="Search…" />
+      <Command.List>
+        <Command.Viewport>
+          <Command.Empty>No results.</Command.Empty>
+          <Command.Item value="home" onSelect={() => (open = false)}>
+            Go home
+          </Command.Item>
+        </Command.Viewport>
+      </Command.List>
+    </Command.Root>
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### Grid layout
+
+Add the `columns` prop to arrange items in a grid instead of a vertical list:
+
+```svelte
+<Command.Root columns={3}>
+  <!-- items will be laid out in a 3-column grid -->
+</Command.Root>
+```
+
+### Link items
+
+Use `Command.LinkItem` when an item should navigate to a URL. It renders an `<a>` element and gets all the prefetching and SvelteKit integration that anchors provide.
+
+```svelte
+<Command.LinkItem href="/dashboard">
+  Dashboard
+</Command.LinkItem>
+```
+
+## Managing value state
+
+The `value` prop tracks the currently highlighted/selected item.
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Command } from "bits-ui";
+
+  let selected = $state("");
+</script>
+
+<button onclick={() => (selected = "settings")}>Highlight settings</button>
+
+<Command.Root bind:value={selected}>
+  <!-- ... -->
+</Command.Root>
+```
+
+### Change handler
+
+```svelte
+<Command.Root onValueChange={(value) => console.log("selected:", value)}>
+  <!-- ... -->
+</Command.Root>
+```
+
+### Fully controlled
+
+```svelte
+<Command.Root bind:value={() => selected, (v) => (selected = v)}>
+  <!-- ... -->
+</Command.Root>
+```
+
+## Filtering
+
+### Default scoring
+
+By default, items are scored and ranked using the built-in `computeCommandScore` function — a fuzzy matching algorithm similar to VS Code's command palette. Items with a score of `0` are hidden entirely.
+
+### Custom filter
+
+Supply the `filter` prop with a function that returns a score between `0` (hidden) and `1` (perfect match):
+
+```svelte
+<script lang="ts">
+  import { Command } from "bits-ui";
+
+  function strictMatch(value: string, search: string): number {
+    return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+  }
+</script>
+
+<Command.Root filter={strictMatch}>
+  <!-- ... -->
+</Command.Root>
+```
+
+### Extending the default filter
+
+Import `computeCommandScore` to build on top of the default algorithm:
+
+```svelte
+<script lang="ts">
+  import { Command, computeCommandScore } from "bits-ui";
+
+  function customFilter(
+    value: string,
+    search: string,
+    keywords?: string[]
+  ): number {
+    const base = computeCommandScore(value, search, keywords);
+    // boost items that start with the search string
+    return value.toLowerCase().startsWith(search.toLowerCase())
+      ? Math.min(base + 0.2, 1)
+      : base;
+  }
+</script>
+
+<Command.Root filter={customFilter}>
+  <!-- ... -->
+</Command.Root>
+```
+
+### Disabling filtering
+
+Set `shouldFilter={false}` to take full control. You are responsible for showing and hiding items yourself — useful for async search or external data sources.
+
+```svelte
+<Command.Root shouldFilter={false}>
+  <!-- render only the items that match your own filter logic -->
+</Command.Root>
+```
+
+### Search keywords
+
+Each `Command.Item` accepts a `keywords` prop — an array of additional strings to match against even if they do not appear in the visible label:
+
+```svelte
+<Command.Item value="theme-toggle" keywords={["dark mode", "light mode", "appearance"]}>
+  Toggle theme
+</Command.Item>
+```
+
+## Imperative API
+
+For advanced use-cases such as custom keybindings, bind to `Command.Root` directly to access programmatic control methods.
+
+```svelte
+<script lang="ts">
+  import { Command } from "bits-ui";
+
+  let command: typeof Command.Root;
+
+  function jumpToLast() {
+    if (!command) return;
+    const items = command.getValidItems();
+    if (items.length) command.updateSelectedToIndex(items.length - 1);
+  }
+</script>
+
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === "End") {
+      e.preventDefault();
+      jumpToLast();
+    }
+  }}
+/>
+
+<Command.Root bind:this={command}>
+  <!-- ... -->
+</Command.Root>
+```
+
+**Available methods**
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getValidItems` | `() => HTMLElement[]` | Returns all currently visible, non-disabled items. |
+| `updateSelectedToIndex` | `(index: number) => void` | Moves selection to the item at the given index. No-op for out-of-bounds indices. |
+| `updateSelectedByItem` | `(change: 1 \| -1) => void` | Moves selection up (`-1`) or down (`1`) by one item. Wraps if `loop` is enabled. |
+| `updateSelectedByGroup` | `(change: 1 \| -1) => void` | Moves selection to the first item in the next or previous group. |
+
+## API Reference
+
+### `Command.Root`
+
+The top-level container. Manages filter state, keyboard interactions, and item registration.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | `""` | The value of the currently highlighted item. Bindable. |
+| `onValueChange` | `(value: string) => void` | — | Called when the highlighted item changes. |
+| `onStateChange` | `(state: CommandState) => void` | — | Called on every state change (search, value, filtered items). |
+| `filter` | `(value: string, search: string, keywords?: string[]) => number` | `computeCommandScore` | Custom scoring function. Return `0` to hide an item. |
+| `shouldFilter` | `boolean` | `true` | Set to `false` to disable built-in filtering entirely. |
+| `loop` | `boolean` | `false` | Whether keyboard navigation wraps around at list boundaries. |
+| `label` | `string` | — | Screen-reader-only accessible label for the command menu. |
+| `columns` | `number \| null` | `null` | Number of columns for grid layout. |
+| `vimBindings` | `boolean` | `true` | When `true`, `Ctrl+N/J/P/K` navigate the list. |
+| `disablePointerSelection` | `boolean` | `false` | Prevents mouse/pointer from changing the selection. |
+| `disableInitialScroll` | `boolean` | `false` | Prevents scrolling to the first item on initial render. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root element. |
+
+### `Command.Input`
+
+The search input field. Its value drives the filter logic.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | `""` | Current search string. Bindable. |
+| `ref` | `HTMLInputElement \| null` | `null` | Bindable reference to the `<input>` element. |
+
+### `Command.List`
+
+Wraps the scrollable list area. Renders a `<div>`.
+
+### `Command.Viewport`
+
+Inner container for the list content. Applies CSS custom properties for dynamic height animation and resizing.
+
+### `Command.Empty`
+
+Displayed when the filtered item count is `0`. Hidden otherwise.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Always render the element regardless of filter state. |
+
+### `Command.Loading`
+
+Displayed while results are being fetched or processed.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `progress` | `number` | — | Optional loading progress `0`–`100`. |
+
+### `Command.Group`
+
+A logical group of items within the list. Hidden automatically when all its items are filtered out.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Unique identifier for the group, used when navigating by group. |
+| `forceMount` | `boolean` | `false` | Always render even when all items are filtered out. |
+
+### `Command.GroupHeading`
+
+An accessible heading for a `Command.Group`. Rendered as a `<div>` and associated with the group via `aria-labelledby`.
+
+### `Command.GroupItems`
+
+The direct container for `Command.Item` elements within a group. Renders a `<div>`.
+
+### `Command.Item`
+
+An individual selectable command. Rendered as a `<div>`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | Text content | Unique value used for filtering and selection. Must be unique across all items. Defaults to the element's `textContent`. |
+| `onSelect` | `() => void` | — | Called when the item is selected via click or `Enter`. |
+| `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and filtering. |
+| `keywords` | `string[]` | — | Additional search terms matched during filtering. |
+| `forceMount` | `boolean` | `false` | Always render this item regardless of filter state. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-selected` | Present when this item is highlighted. |
+| `data-disabled` | Present when the item is disabled. |
+| `data-command-item` | Present on the element. |
+
+### `Command.LinkItem`
+
+Identical to `Command.Item` but renders an `<a>` element. Accepts all `HTMLAnchorAttributes` including `href`, `target`, and `rel`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `href` | `string` | — | Navigation target URL. |
+| `value` | `string` | Text content | Unique filtering value. |
+| `onSelect` | `() => void` | — | Called when selected. |
+| `disabled` | `boolean` | `false` | Disables the item. |
+| `keywords` | `string[]` | — | Additional search terms. |
+
+### `Command.Separator`
+
+A visual divider between sections. Hidden when filtering is active (unless `forceMount` is set).
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Always render the separator. |
+
+## Common mistakes
+
+### Duplicate item values
+
+Every `Command.Item` must have a **unique** `value`. When two items share a value, keyboard and pointer selection behaves unpredictably. If two items display the same text, use the `value` prop to assign distinct identifiers:
+
+```svelte
+<Command.Item value="typescript-file">TypeScript file</Command.Item>
+<Command.Item value="typescript-config">TypeScript file</Command.Item>
+```
+
+The `value` drives filtering and selection; the visible text content is purely presentational once a `value` is set.
+
+## Keyboard interactions
+
+| Key | Action |
+|-----|--------|
+| `ArrowDown` / `Ctrl+J` / `Ctrl+N` | Move selection to the next item. |
+| `ArrowUp` / `Ctrl+K` / `Ctrl+P` | Move selection to the previous item. |
+| `Enter` | Select the currently highlighted item. |
+| `Escape` | Clears the search input (if non-empty) or closes a containing dialog. |
+
+## Accessibility
+
+- Provide a `label` prop on `Command.Root` for screen readers to announce the purpose of the command menu.
+- Item groups receive accessible labels via `Command.GroupHeading` and `aria-labelledby`.
+- `Command.Empty` and `Command.Loading` use `aria-live` regions so their content is announced when it appears.
+- All keyboard interactions use standard ARIA listbox patterns.

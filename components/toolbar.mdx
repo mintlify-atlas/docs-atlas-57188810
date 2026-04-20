@@ -1,0 +1,192 @@
+---
+title: "Toolbar: Accessible Horizontal Action Bar Component"
+description: "A horizontal toolbar containing toggle groups, action buttons, and links with roving keyboard focus and full accessibility semantics built in."
+---
+
+The Toolbar component renders a horizontal row of controls — toggle groups, standalone buttons, and links — with a single roving-focus tab stop. Within the toolbar, users navigate between items using the arrow keys. It is well-suited for text-editor toolbars, formatting bars, and any surface where a compact set of frequently used actions needs to be keyboard-accessible in a single tab stop.
+
+## Installation
+
+```typescript
+import { Toolbar } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { Toolbar } from "bits-ui";
+</script>
+
+<Toolbar.Root>
+  <Toolbar.Group type="single">
+    <Toolbar.GroupItem value="bold">B</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="italic">I</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="underline">U</Toolbar.GroupItem>
+  </Toolbar.Group>
+
+  <Toolbar.Button>Insert</Toolbar.Button>
+  <Toolbar.Link href="/help">Help</Toolbar.Link>
+</Toolbar.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { Toolbar } from "bits-ui";
+</script>
+
+<Toolbar.Root>
+  <Toolbar.Group>
+    <Toolbar.GroupItem />
+  </Toolbar.Group>
+  <Toolbar.Link />
+  <Toolbar.Button />
+</Toolbar.Root>
+```
+
+## Managing value state
+
+`Toolbar.Group` wraps a toggle group. Its `value` tracks which item(s) are currently pressed.
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Toolbar } from "bits-ui";
+  let formatting = $state("");
+</script>
+
+<button onclick={() => (formatting = "bold")}>Bold</button>
+
+<Toolbar.Root>
+  <Toolbar.Group type="single" bind:value={formatting}>
+    <Toolbar.GroupItem value="bold">Bold</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="italic">Italic</Toolbar.GroupItem>
+  </Toolbar.Group>
+</Toolbar.Root>
+```
+
+### Fully controlled
+
+Use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for explicit control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Toolbar } from "bits-ui";
+  let formatting = $state("");
+
+  function getValue() {
+    return formatting;
+  }
+
+  function setValue(newValue: string) {
+    formatting = newValue;
+  }
+</script>
+
+<Toolbar.Root>
+  <Toolbar.Group type="single" bind:value={getValue, setValue}>
+    <Toolbar.GroupItem value="bold">Bold</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="italic">Italic</Toolbar.GroupItem>
+  </Toolbar.Group>
+</Toolbar.Root>
+```
+
+## Multiple-selection groups
+
+Set `type="multiple"` on `Toolbar.Group` to allow multiple items to be pressed simultaneously. The `value` prop becomes a `string[]`.
+
+```svelte
+<script lang="ts">
+  import { Toolbar } from "bits-ui";
+  let active = $state<string[]>([]);
+</script>
+
+<Toolbar.Root>
+  <Toolbar.Group type="multiple" bind:value={active}>
+    <Toolbar.GroupItem value="bold">Bold</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="italic">Italic</Toolbar.GroupItem>
+    <Toolbar.GroupItem value="underline">Underline</Toolbar.GroupItem>
+  </Toolbar.Group>
+</Toolbar.Root>
+```
+
+## Pressed state in group items
+
+The `children` snippet prop receives `{ pressed: boolean }` so you can conditionally style or annotate a toggled item:
+
+```svelte
+<Toolbar.GroupItem value="bold">
+  {#snippet children({ pressed })}
+    <span class:active={pressed}>B</span>
+  {/snippet}
+</Toolbar.GroupItem>
+```
+
+## API Reference
+
+### Root
+
+The outer toolbar container. Manages roving focus among all child controls.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Orientation of the toolbar, which determines the arrow key direction for navigation. |
+| `loop` | `boolean` | `true` | Whether focus loops from the last item back to the first when navigating with the keyboard. |
+
+### Group
+
+A toggle group inside the toolbar. Items within the group can be pressed/unpressed. Corresponds to a `ToggleGroup`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | **Required** | Whether only one item or multiple items can be pressed at once. |
+| `value` | `string` (single) or `string[]` (multiple) | — | The pressed value(s). Supports `bind:value`. |
+| `onValueChange` | `(value: string \| string[]) => void` | — | Callback fired when the pressed value changes. |
+| `disabled` | `boolean` | `false` | Disables all items in the group when `true`. |
+
+### GroupItem
+
+A toggle button within a `Group`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | **Required** | The value this item represents. |
+| `disabled` | `boolean \| null` | `false` | Disables this item when `true`. |
+
+Children snippet props: `{ pressed: boolean }`.
+
+### Button
+
+A standalone action button inside the toolbar.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean \| null` | `false` | Disables the button when `true`. |
+
+### Link
+
+A navigable anchor element inside the toolbar.
+
+Accepts all standard anchor attributes (e.g. `href`, `target`, `rel`).
+
+## Accessibility
+
+The Toolbar follows the [ARIA Toolbar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/).
+
+The root element has `role="toolbar"`. Focus is managed as a single tab stop — once focus enters the toolbar, arrow keys move between items.
+
+| Key | Behavior |
+|-----|----------|
+| `Tab` | Moves focus into the toolbar (to the last focused item or the first item). |
+| `ArrowRight` / `ArrowDown` | Moves focus to the next item. |
+| `ArrowLeft` / `ArrowUp` | Moves focus to the previous item. |
+| `Home` | Moves focus to the first item. |
+| `End` | Moves focus to the last item. |
+| `Enter` / `Space` | Activates the focused button or toggles the focused toggle item. |
+
+When the toolbar's `orientation` is `"horizontal"`, `ArrowLeft`/`ArrowRight` navigate items. When `"vertical"`, `ArrowUp`/`ArrowDown` navigate items.

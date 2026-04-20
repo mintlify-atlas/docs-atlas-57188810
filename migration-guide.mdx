@@ -1,0 +1,191 @@
+---
+title: "Migration Guide: Upgrading from Bits UI v0.x to v1+"
+description: "Step-by-step guide to migrating from Bits UI v0.x to v1+. Covers shared breaking changes and per-component API updates for Svelte 5 compatibility."
+---
+
+Bits UI v1 is a complete rewrite for Svelte 5, bringing significant performance improvements, more flexible APIs, and a better developer experience. Since anything before v1.0 was a pre-release, backward compatibility was not guaranteed. This guide will help you transition smoothly, though it may not cover every edge case.
+
+<Note>
+  Looking for the old documentation? You can still access Bits UI v0.x at [v0.bits-ui.com](https://v0.bits-ui.com). We encourage migrating as soon as possible to benefit from the latest features and improvements.
+</Note>
+
+## Why upgrade?
+
+Bits UI has been completely rewritten for Svelte 5, bringing several key benefits:
+
+- **Performance improvements** — Faster rendering and reduced overhead
+- **More flexible APIs** — Easier customization and integration
+- **Bug fixes and stability** — Addressing every bug and issue from v0.x
+- **Better developer experience** — Improved consistency and documentation
+
+## Shared changes
+
+These changes apply to all or most components.
+
+<Warning>
+  All of the following are breaking changes. Review each section carefully before migrating.
+</Warning>
+
+### `el` prop replaced with `ref`
+
+The `el` prop has been removed from all components that render an HTML element. Use the `ref` prop instead.
+
+```svelte
+<!-- Before (v0.x) -->
+<Accordion.Trigger bind:el={myElement}>...</Accordion.Trigger>
+
+<!-- After (v1+) -->
+<Accordion.Trigger bind:ref={myElement}>...</Accordion.Trigger>
+```
+
+### `asChild` replaced with `child` snippet
+
+Components that previously used `asChild` now use the `child` snippet prop. See the [child snippet guide](/child-snippet) for full documentation.
+
+```svelte
+<!-- Before (v0.x) -->
+<Accordion.Trigger asChild let:builder>
+  <button {...builder}>Toggle</button>
+</Accordion.Trigger>
+
+<!-- After (v1+) -->
+<Accordion.Trigger>
+  {#snippet child({ props })}
+    <button {...props}>Toggle</button>
+  {/snippet}
+</Accordion.Trigger>
+```
+
+### Transition props removed
+
+Components no longer accept `transition*` props. Instead, use the `child` snippet along with `forceMount` to apply Svelte transitions or any other animation library. See the [transitions guide](/transitions) for details.
+
+### `let:` directives replaced with snippet props
+
+Components that used to expose data via `let:` directives now provide it through `children`/`child` snippet props.
+
+```svelte
+<!-- Before (v0.x) -->
+<Checkbox.Root let:checked>
+  {checked ? "Checked" : "Unchecked"}
+</Checkbox.Root>
+
+<!-- After (v1+) -->
+<Checkbox.Root>
+  {#snippet children({ checked })}
+    {checked ? "Checked" : "Unchecked"}
+  {/snippet}
+</Checkbox.Root>
+```
+
+---
+
+## Per-component changes
+
+### Accordion
+
+- The `multiple` prop has been removed from `Accordion.Root`. It is replaced with a required `type` prop set to either `'single'` or `'multiple'`. This is used as a discriminant to properly type the `value` prop as either `string` or `string[]`.
+- The various `transition` props have been removed from `Accordion.Content`. See the [transitions guide](/transitions).
+
+```svelte
+<!-- Before -->
+<Accordion.Root multiple>...</Accordion.Root>
+
+<!-- After -->
+<Accordion.Root type="multiple">...</Accordion.Root>
+```
+
+See the [Accordion documentation](/components/accordion) for details.
+
+### Alert Dialog
+
+- The various `transition` props have been removed from `AlertDialog.Content` and `AlertDialog.Overlay`.
+- To render dialog content in a portal, you must now wrap `AlertDialog.Content` in the `AlertDialog.Portal` component.
+- `AlertDialog.Action` no longer closes the dialog by default, as this caused issues when submitting forms. See the [form submission](/components/alert-dialog) section for how to handle this.
+
+### Button
+
+- `Button` no longer accepts a `builders` prop. Use the `child` snippet on the relevant components to receive and pass attributes to the underlying button. See the [child snippet guide](/child-snippet).
+
+### Checkbox
+
+<Warning>
+  Several Checkbox sub-components have been removed in v1.
+</Warning>
+
+- `Checkbox.Indicator` has been removed. Use the `children` snippet prop to access the `checked` state and render a custom indicator.
+- `Checkbox.Input` has been removed. A hidden input is now rendered automatically when you provide the `name` prop to `Checkbox.Root`.
+- The `checked` state is now `boolean` instead of `boolean | 'indeterminate'`. Indeterminate state is now managed separately via the `indeterminate` prop.
+- A new `Checkbox.Group` component has been added to support checkbox groups.
+
+See the [Checkbox documentation](/components/checkbox) for details.
+
+### Combobox
+
+- The `multiple` prop has been removed from `Combobox.Root`. Use the required `type` prop set to `'single'` or `'multiple'`.
+- The `selected` prop has been replaced with a `value` prop (`string` or `string[]`).
+- A hidden input is rendered automatically when you provide `name` to `Combobox.Root`.
+- `Combobox.ItemIndicator` has been removed. Use the `children` snippet prop to access the `selected` state.
+- `Combobox.Group` and `Combobox.GroupHeading` have been added for grouping items.
+- In v0, `Combobox.Content` was automatically portalled. In v1, wrap it in `Combobox.Portal` to portal. `Combobox.Portal` accepts a `to` prop (defaults to `document.body`) and a `disabled` prop.
+
+See the [Combobox documentation](/components/combobox) for details.
+
+### Context Menu / Dropdown Menu / Menubar Menu
+
+- `*Menu.RadioIndicator` and `*Menu.CheckboxIndicator` have been removed. Use the `children` snippet prop to render custom indicators.
+- `*Menu.Label` (used as group headings) has been replaced with `*Menu.GroupHeading`.
+- The `href` prop on `.Item` components has been removed. Use the `child` snippet to render your own anchor element.
+- In v0, `*Menu.Content` was automatically portalled. In v1, wrap it in `*Menu.Portal`. `*Menu.Portal` accepts `to` (defaults to `document.body`) and `disabled` props.
+
+See the [Context Menu](/components/context-menu), [Dropdown Menu](/components/dropdown-menu), and [Menubar](/components/menubar) documentation.
+
+### Pin Input
+
+The `PinInput` component has been completely overhauled to act as an OTP input, with code and inspiration taken from [Input OTP](https://github.com/guilhermerodz/input-otp). The best way to migrate is to reference the [Pin Input documentation](/components/pin-input) directly.
+
+### Popover
+
+- In v0, `Popover.Content` was automatically portalled. In v1, wrap it in `Popover.Portal`. `Popover.Portal` accepts `to` (defaults to `document.body`) and `disabled` props.
+
+### Radio Group
+
+- `RadioGroup.ItemIndicator` has been removed. Use the `children` snippet prop to access the `checked` state and render a custom indicator.
+
+See the [Radio Group documentation](/components/radio-group).
+
+### Scroll Area
+
+- `ScrollArea.Content` has been removed. It is not necessary for functionality in Bits UI v1.
+
+### Select
+
+- The `multiple` prop has been removed from `Select.Root`. Use the required `type` prop set to `'single'` or `'multiple'`.
+- The `selected` prop has been replaced with a `value` prop (`string` or `string[]`).
+- A hidden input is rendered automatically when you provide `name` to `Select.Root`.
+- `Select.ItemIndicator` has been removed. Use the `children` snippet prop to access the `selected` state.
+- `Select.Group` and `Select.GroupHeading` have been added for grouping items.
+- `Select.Value` has been removed. Use the `value` prop directly to render a custom label in the trigger.
+- In v0, `Select.Content` was automatically portalled. In v1, wrap it in `Select.Portal`.
+
+See the [Select documentation](/components/select).
+
+### Slider
+
+- `Slider.Root` now requires a `type` prop set to `'single'` or `'multiple'` to properly type `value` as `number` or `number[]`.
+- A new `onValueCommit` prop has been introduced, called when the user commits a value change (e.g. on mouse release or pressing Enter). Useful when you want to update only after the user finishes interacting, not on every thumb movement.
+
+### Tooltip
+
+- A new required context component, `Tooltip.Provider`, has been added. This replaces the `group` prop from v0. Wrap your entire app or a specific section with `Tooltip.Provider` to provide shared tooltip context.
+
+```svelte
+<!-- Before (v0.x) -->
+<Tooltip.Root group="my-group">...</Tooltip.Root>
+
+<!-- After (v1+) -->
+<Tooltip.Provider>
+  <Tooltip.Root>...</Tooltip.Root>
+  <Tooltip.Root>...</Tooltip.Root>
+</Tooltip.Provider>
+```

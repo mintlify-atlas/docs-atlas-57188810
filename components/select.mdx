@@ -1,0 +1,285 @@
+---
+title: "Select: Dropdown List with Typeahead and Groups"
+description: A fully accessible select dropdown with typeahead, keyboard navigation, grouped options, scroll buttons, portal rendering, and single or multiple selection.
+---
+
+The Select component provides a styled, accessible alternative to the native `<select>` element. Content is positioned with [Floating UI](https://floating-ui.com/) and rendered in a portal by default. A `type` prop discriminates between single selection (value is `string`) and multiple selection (value is `string[]`). A hidden input is rendered for form submission when `name` is provided.
+
+## Installation
+
+```typescript
+import { Select } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { Select } from "bits-ui";
+</script>
+
+<Select.Root type="single">
+  <Select.Trigger>
+    <Select.Value placeholder="Pick a fruit…" />
+  </Select.Trigger>
+  <Select.Portal>
+    <Select.Content>
+      <Select.ScrollUpButton>↑</Select.ScrollUpButton>
+      <Select.Viewport>
+        <Select.Item value="apple" label="Apple">
+          {#snippet children({ selected })}
+            {selected ? "✓ " : ""}Apple
+          {/snippet}
+        </Select.Item>
+        <Select.Item value="banana" label="Banana">
+          {#snippet children({ selected })}
+            {selected ? "✓ " : ""}Banana
+          {/snippet}
+        </Select.Item>
+      </Select.Viewport>
+      <Select.ScrollDownButton>↓</Select.ScrollDownButton>
+    </Select.Content>
+  </Select.Portal>
+</Select.Root>
+```
+
+### Reusable component
+
+```svelte title="MySelect.svelte"
+<script lang="ts">
+  import { Select, type WithoutChildren } from "bits-ui";
+
+  type Props = WithoutChildren<Select.RootProps> & {
+    placeholder?: string;
+    items: { value: string; label: string; disabled?: boolean }[];
+    contentProps?: WithoutChildren<Select.ContentProps>;
+  };
+
+  let {
+    value = $bindable(),
+    items,
+    contentProps,
+    placeholder,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<Select.Root bind:value={value as never} {...restProps}>
+  <Select.Trigger>
+    <Select.Value {placeholder} />
+  </Select.Trigger>
+  <Select.Portal>
+    <Select.Content {...contentProps}>
+      <Select.ScrollUpButton>↑</Select.ScrollUpButton>
+      <Select.Viewport>
+        {#each items as { value, label, disabled } (value)}
+          <Select.Item {value} {label} {disabled}>
+            {#snippet children({ selected })}
+              {selected ? "✓ " : ""}{label}
+            {/snippet}
+          </Select.Item>
+        {/each}
+      </Select.Viewport>
+      <Select.ScrollDownButton>↓</Select.ScrollDownButton>
+    </Select.Content>
+  </Select.Portal>
+</Select.Root>
+```
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import MySelect from "$lib/components/MySelect.svelte";
+
+  const fruits = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+    { value: "cherry", label: "Cherry" },
+  ];
+  let fruit = $state("apple");
+</script>
+
+<MySelect type="single" {fruits} bind:value={fruit} name="fruit" />
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Select } from "bits-ui";
+  let chosen = $state("");
+</script>
+
+<Select.Root type="single" bind:value={chosen}><!-- … --></Select.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { Select } from "bits-ui";
+  let chosen = $state("");
+
+  function getValue() { return chosen; }
+  function setValue(v: string) { chosen = v; }
+</script>
+
+<Select.Root type="single" bind:value={getValue, setValue}><!-- … --></Select.Root>
+```
+
+## Multiple Selection
+
+```svelte
+<script lang="ts">
+  import { Select } from "bits-ui";
+  let chosen = $state<string[]>([]);
+</script>
+
+<Select.Root type="multiple" bind:value={chosen}>
+  <!-- items -->
+</Select.Root>
+```
+
+## Grouped Options
+
+```svelte
+<Select.Viewport>
+  <Select.Group>
+    <Select.GroupHeading>Citrus</Select.GroupHeading>
+    <Select.Item value="lemon" label="Lemon">
+      {#snippet children({ selected })}Lemon{/snippet}
+    </Select.Item>
+    <Select.Item value="lime" label="Lime">
+      {#snippet children({ selected })}Lime{/snippet}
+    </Select.Item>
+  </Select.Group>
+  <Select.Separator />
+  <Select.Item value="mango" label="Mango">
+    {#snippet children({ selected })}Mango{/snippet}
+  </Select.Item>
+</Select.Viewport>
+```
+
+## HTML Forms
+
+```svelte
+<form method="POST">
+  <Select.Root type="single" name="fruit" required>
+    <!-- … -->
+  </Select.Root>
+  <button type="submit">Order</button>
+</form>
+```
+
+## Svelte Transitions
+
+Use `forceMount` with the `child` snippet to animate the content panel.
+
+```svelte
+<script lang="ts">
+  import { Select } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Select.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly={{ y: -8 }}>
+          <!-- items -->
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</Select.Content>
+```
+
+## API Reference
+
+### `Select.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `"single" \| "multiple"` | — | **Required.** Determines value type and selection behavior. |
+| `value` | `string` (single) or `string[]` (multiple) | `undefined` | Selected value(s). Bindable. |
+| `open` | `boolean` | `false` | Whether the dropdown is open. Bindable. |
+| `disabled` | `boolean` | `false` | Disables the entire select. |
+| `required` | `boolean` | `false` | Marks the hidden input as required. |
+| `name` | `string` | `undefined` | Enables hidden input for form submission. |
+| `loop` | `boolean` | `false` | Keyboard navigation wraps around the list. |
+| `scrollAlignment` | `"nearest" \| "center"` | `"nearest"` | How keyboard-navigated items are scrolled into view. |
+| `allowDeselect` | `boolean` | `false` | Clicking a selected item deselects it (single mode only). |
+| `items` | `{ value: string; label: string; disabled?: boolean }[]` | `undefined` | Used for typeahead when content is closed. |
+| `onValueChange` | `(v: string \| string[]) => void` | — | Called when selection changes. |
+| `onOpenChange` | `(v: boolean) => void` | — | Called when open state changes. |
+| `onOpenChangeComplete` | `(v: boolean) => void` | — | Called after the open/close animation completes. |
+
+### `Select.Trigger`
+
+Button that opens the dropdown. Accepts standard button attributes.
+
+### `Select.Value`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `placeholder` | `string` | `undefined` | Text shown when nothing is selected. |
+| `children` | `Snippet<[{ selection; placeholder; disabled }]>` | — | Custom rendering of the displayed value. |
+
+### `Select.Content`
+
+Floating dropdown panel powered by Floating UI.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep mounted even when closed (for transitions). |
+| `preventScroll` | `boolean` | `false` | Lock body scroll while open. |
+| `customAnchor` | `string \| HTMLElement` | `undefined` | Anchor element instead of the trigger. |
+| `loop` | `boolean` | `false` | Keyboard navigation wraps around. |
+
+### `Select.ContentStatic`
+
+Alternative to `Select.Content` that opts out of Floating UI positioning.
+
+### `Select.Item`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | **Required.** The value this item represents. |
+| `label` | `string` | `value` | Human-readable label used for typeahead. |
+| `disabled` | `boolean` | `false` | Disables selection of this item. |
+| `onHighlight` | `() => void` | — | Called when the item becomes highlighted. |
+| `onUnhighlight` | `() => void` | — | Called when the item loses highlight. |
+| `children` | `Snippet<[{ selected: boolean; highlighted: boolean }]>` | — | Custom item rendering. |
+
+### `Select.Group` / `Select.GroupHeading` / `Select.Separator`
+
+Semantic grouping helpers. No component-specific props.
+
+### `Select.Viewport`
+
+Wraps items to enable scroll button visibility detection.
+
+### `Select.ScrollUpButton` / `Select.ScrollDownButton`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `delay` | `(tick: number) => number` | `() => 50` | Controls scroll speed; called with an incrementing tick counter. |
+
+### `Select.Portal`
+
+Renders the dropdown into a different DOM node.
+
+### `Select.Arrow`
+
+Decorative arrow pointing from content toward the trigger.
+
+## Accessibility
+
+- The trigger has `role="combobox"` and `aria-haspopup="listbox"`.
+- The content has `role="listbox"`; items have `role="option"` and `aria-selected`.
+- Focus stays on the trigger while navigating with arrow keys; `aria-activedescendant` tracks the highlighted item.
+- Typeahead: pressing a character key while focused on the trigger highlights the matching item.
+- `Escape` closes the dropdown; `Enter`/`Space` selects the highlighted item.

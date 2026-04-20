@@ -1,0 +1,403 @@
+---
+title: "Dialog: Accessible Modal Windows for Svelte 5"
+description: "A fully accessible modal dialog built for Svelte 5. Supports focus trapping, nested dialogs, controlled state, portals, and Svelte transitions."
+---
+
+The Dialog component provides a modal window that appears above page content and captures user focus. It follows the WAI-ARIA dialog pattern and handles focus trapping, scroll locking, and keyboard interactions automatically.
+
+## Installation
+
+```bash
+npm install bits-ui
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger>Open Dialog</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content>
+      <Dialog.Title>Account settings</Dialog.Title>
+      <Dialog.Description>Manage your account settings and preferences.</Dialog.Description>
+      <!-- dialog content -->
+      <Dialog.Close>Close</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+## Component structure
+
+```svelte
+<Dialog.Root>
+  <Dialog.Trigger />
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content>
+      <Dialog.Title />
+      <Dialog.Description />
+      <Dialog.Close />
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+`Dialog.Portal` renders its children outside the normal DOM hierarchy. Always wrap `Dialog.Overlay` and `Dialog.Content` in a portal to ensure correct stacking context.
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open Dialog</button>
+
+<Dialog.Root bind:open={isOpen}>
+  <!-- ... -->
+</Dialog.Root>
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<Dialog.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</Dialog.Root>
+```
+
+## Focus management
+
+When the dialog opens, focus moves to the first focusable element inside `Dialog.Content`. When it closes, focus returns to the trigger.
+
+### Customizing initial focus
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger>Open Dialog</Dialog.Trigger>
+  <Dialog.Content
+    onOpenAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <input type="text" bind:this={nameInput} />
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### Customizing close focus
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<input type="text" bind:this={nameInput} />
+<Dialog.Root>
+  <Dialog.Trigger>Open Dialog</Dialog.Trigger>
+  <Dialog.Content
+    onCloseAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <!-- ... -->
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### Disabling the focus trap
+
+<Warning>
+  Disabling the focus trap may compromise accessibility. Only do this if you have a specific reason and implement an alternative focus management strategy.
+</Warning>
+
+```svelte
+<Dialog.Content trapFocus={false}>
+  <!-- ... -->
+</Dialog.Content>
+```
+
+## Scroll lock
+
+By default, body scrolling is disabled when the dialog is open. To allow scrolling:
+
+```svelte
+<Dialog.Content preventScroll={false}>
+  <!-- ... -->
+</Dialog.Content>
+```
+
+## Escape key handling
+
+By default, pressing `Escape` closes the dialog. Use `escapeKeydownBehavior` to change this:
+
+- `'close'` (default): Closes immediately.
+- `'ignore'`: Prevents closing.
+- `'defer-otherwise-close'`: Defers to an ancestor Bits UI component, or closes.
+- `'defer-otherwise-ignore'`: Defers to an ancestor Bits UI component, or ignores.
+
+```svelte
+<Dialog.Content escapeKeydownBehavior="ignore">
+  <!-- ... -->
+</Dialog.Content>
+```
+
+For custom logic, use `onEscapeKeydown`:
+
+```svelte
+<Dialog.Content
+  onEscapeKeydown={(e) => {
+    e.preventDefault();
+    // custom behavior
+  }}
+>
+  <!-- ... -->
+</Dialog.Content>
+```
+
+## Interaction outside
+
+By default, clicking outside `Dialog.Content` closes the dialog. Use `interactOutsideBehavior` to change this:
+
+- `'close'` (default): Closes immediately.
+- `'ignore'`: Prevents closing.
+- `'defer-otherwise-close'`: Defers to an ancestor, or closes.
+- `'defer-otherwise-ignore'`: Defers to an ancestor, or ignores.
+
+```svelte
+<Dialog.Content interactOutsideBehavior="ignore">
+  <!-- ... -->
+</Dialog.Content>
+```
+
+## Nested dialogs
+
+Dialogs can be nested. Each dialog tracks its depth and the number of open nested dialogs via data attributes and CSS variables.
+
+**Data attributes:**
+
+- `data-nested-open`: Present on `Dialog.Content` and `Dialog.Overlay` when nested dialogs are open inside this one.
+- `data-nested`: Present when the dialog is itself nested inside another.
+
+**CSS variables:**
+
+- `--bits-dialog-depth`: Nesting depth (0 = root, 1 = first nested, etc.).
+- `--bits-dialog-nested-count`: Number of currently open nested dialogs (reactive).
+
+```svelte
+<Dialog.Content
+  style="transform: scale(calc(1 - var(--bits-dialog-nested-count) * 0.05));
+         filter: blur(calc(var(--bits-dialog-nested-count) * 2px));"
+>
+  <!-- dialog content -->
+</Dialog.Content>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions. `forceMount` keeps components in the DOM at all times; the `child` snippet exposes `open` and `props` so you control visibility and animation.
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+  import { fly, fade } from "svelte/transition";
+</script>
+
+<Dialog.Root>
+  <Dialog.Portal>
+    <Dialog.Overlay forceMount>
+      {#snippet child({ props, open })}
+        {#if open}
+          <div {...props} transition:fade><!-- ... --></div>
+        {/if}
+      {/snippet}
+    </Dialog.Overlay>
+    <Dialog.Content forceMount>
+      {#snippet child({ props, open })}
+        {#if open}
+          <div {...props} transition:fly><!-- ... --></div>
+        {/if}
+      {/snippet}
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+See the [transitions guide](/transitions) for more.
+
+## Working with forms
+
+### Form submission
+
+Programmatically close the dialog after an async action completes:
+
+```svelte
+<script lang="ts">
+  import { Dialog } from "bits-ui";
+
+  function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  let open = $state(false);
+</script>
+
+<Dialog.Root bind:open>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content>
+      <Dialog.Title>Confirm your action</Dialog.Title>
+      <Dialog.Description>Are you sure you want to do this?</Dialog.Description>
+      <form
+        method="POST"
+        action="?/someAction"
+        onsubmit={() => {
+          wait(1000).then(() => (open = false));
+        }}
+      >
+        <button type="submit">Submit form</button>
+      </form>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+### Dialog inside a form
+
+If your Dialog is rendered _inside_ a `<form>`, disable or omit `Dialog.Portal`. Portalling moves content outside the form element, breaking form submission.
+
+## Reusable component pattern
+
+```svelte title="MyDialog.svelte"
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { Dialog, type WithoutChild } from "bits-ui";
+
+  type Props = Dialog.RootProps & {
+    buttonText: string;
+    title: Snippet;
+    description: Snippet;
+    contentProps?: WithoutChild<Dialog.ContentProps>;
+  };
+
+  let {
+    open = $bindable(false),
+    children,
+    buttonText,
+    contentProps,
+    title,
+    description,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<Dialog.Root bind:open {...restProps}>
+  <Dialog.Trigger>{buttonText}</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay />
+    <Dialog.Content {...contentProps}>
+      <Dialog.Title>{@render title()}</Dialog.Title>
+      <Dialog.Description>{@render description()}</Dialog.Description>
+      {@render children?.()}
+      <Dialog.Close>Close Dialog</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+## API reference
+
+### Dialog.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the dialog. |
+| `onOpenChange` | `(open: boolean) => void` | — | Called when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Called when the open/close animation completes. |
+
+### Dialog.Trigger
+
+Renders a `<button>` that toggles the dialog. Accepts all standard button attributes plus `child` snippet.
+
+### Dialog.Portal
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| Element` | `document.body` | Where to portal the content. |
+| `disabled` | `boolean` | `false` | Disable portalling and render inline. |
+
+### Dialog.Overlay
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the overlay mounted even when closed. Use with `child` snippet for transitions. |
+
+### Dialog.Content
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep content mounted even when closed. Use with `child` snippet for transitions. |
+| `trapFocus` | `boolean` | `true` | Whether to trap focus within the content. |
+| `preventScroll` | `boolean` | `true` | Whether to prevent body scrolling when open. |
+| `escapeKeydownBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when Escape is pressed. |
+| `onEscapeKeydown` | `(e: KeyboardEvent) => void` | — | Custom handler for Escape key press. |
+| `interactOutsideBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when interacting outside content. |
+| `onInteractOutside` | `(e: PointerEvent) => void` | — | Custom handler for outside interactions. |
+| `onOpenAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on open. |
+| `onCloseAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on close. |
+
+### Dialog.Title
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `level` | `1 \| 2 \| 3 \| 4 \| 5 \| 6` | `2` | The heading level rendered by the title element. |
+
+### Dialog.Description
+
+Renders the dialog description. Accepts all standard div attributes.
+
+### Dialog.Close
+
+Renders a `<button>` that closes the dialog. Accepts all standard button attributes.
+
+## Accessibility
+
+- Follows the [WAI-ARIA Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/).
+- `Dialog.Content` receives `role="dialog"` and `aria-modal="true"`.
+- `Dialog.Title` is linked via `aria-labelledby`.
+- `Dialog.Description` is linked via `aria-describedby`.
+- Focus is trapped inside the dialog while it is open.
+- Pressing `Escape` closes the dialog by default.
+- Focus returns to the trigger element when the dialog closes.

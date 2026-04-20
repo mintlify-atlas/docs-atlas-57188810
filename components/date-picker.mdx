@@ -1,0 +1,324 @@
+---
+title: Date Picker — Calendar Popover Date Input for Svelte 5
+description: A Svelte 5 date picker combining a segmented date field with a calendar popover, supporting keyboard-driven date selection, validation, and localization.
+---
+
+The `DatePicker` component merges a segmented [Date Field](/components/date-field), an interactive [Calendar](/components/calendar), and a [Popover](/components/popover) into a single cohesive primitive. Users can type dates segment-by-segment or click a trigger to open a calendar popover.
+
+Before using this component, read the [Dates guide](/dates) to understand `DateValue` types from `@internationalized/date`.
+
+## Installation
+
+The `DatePicker` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Structure
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+</script>
+
+<DatePicker.Root>
+  <DatePicker.Label>Appointment date</DatePicker.Label>
+  <DatePicker.Input>
+    {#snippet children({ segments })}
+      {#each segments as { part, value }}
+        <DatePicker.Segment {part}>
+          {value}
+        </DatePicker.Segment>
+      {/each}
+      <DatePicker.Trigger>Pick a date</DatePicker.Trigger>
+    {/snippet}
+  </DatePicker.Input>
+
+  <DatePicker.Content>
+    <DatePicker.Calendar>
+      {#snippet children({ months, weekdays })}
+        <DatePicker.Header>
+          <DatePicker.PrevButton />
+          <DatePicker.Heading />
+          <DatePicker.NextButton />
+        </DatePicker.Header>
+
+        {#each months as month}
+          <DatePicker.Grid>
+            <DatePicker.GridHead>
+              <DatePicker.GridRow>
+                {#each weekdays as day}
+                  <DatePicker.HeadCell>{day}</DatePicker.HeadCell>
+                {/each}
+              </DatePicker.GridRow>
+            </DatePicker.GridHead>
+            <DatePicker.GridBody>
+              {#each month.weeks as weekDates}
+                <DatePicker.GridRow>
+                  {#each weekDates as date}
+                    <DatePicker.Cell {date} month={month.value}>
+                      <DatePicker.Day />
+                    </DatePicker.Cell>
+                  {/each}
+                </DatePicker.GridRow>
+              {/each}
+            </DatePicker.GridBody>
+          </DatePicker.Grid>
+        {/each}
+      {/snippet}
+    </DatePicker.Calendar>
+  </DatePicker.Content>
+</DatePicker.Root>
+```
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myValue = $state(new CalendarDateTime(2024, 8, 3, 12, 30));
+</script>
+
+<button onclick={() => (myValue = myValue.add({ days: 1 }))}>Add 1 day</button>
+
+<DatePicker.Root bind:value={myValue}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  let myValue = $state<DateValue>();
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: DateValue) {
+    myValue = newValue;
+  }
+</script>
+
+<DatePicker.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+## Managing Placeholder State
+
+The `placeholder` prop controls which month the calendar opens to when no value is selected. Use it to set a default calendar view or enable time/timezone segments in the field.
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import { CalendarDateTime } from "@internationalized/date";
+
+  let myPlaceholder = $state(new CalendarDateTime(2024, 8, 3, 12, 30));
+</script>
+
+<DatePicker.Root bind:placeholder={myPlaceholder}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  let myPlaceholder = $state<DateValue>();
+
+  function getPlaceholder() {
+    return myPlaceholder;
+  }
+
+  function setPlaceholder(newPlaceholder: DateValue) {
+    myPlaceholder = newPlaceholder;
+  }
+</script>
+
+<DatePicker.Root bind:placeholder={getPlaceholder, setPlaceholder}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+## Managing Open State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open picker</button>
+
+<DatePicker.Root bind:open={isOpen}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<DatePicker.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+## Default Value from a String
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import { parseDate } from "@internationalized/date";
+
+  let value = $state(parseDate("2024-08-03"));
+</script>
+
+<DatePicker.Root {value}>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+## Validation
+
+The `DatePicker.Root` accepts all the same validation props as `DateField.Root`:
+
+```svelte
+<script lang="ts">
+  import { DatePicker } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+  import type { DateValue } from "@internationalized/date";
+
+  const todayDate = today(getLocalTimeZone());
+
+  function validate(date: DateValue) {
+    return date.day === 1 ? "First of the month is unavailable" : undefined;
+  }
+</script>
+
+<DatePicker.Root
+  minValue={todayDate}
+  {validate}
+  onInvalid={(reason, msg) => console.error(reason, msg)}
+>
+  <!-- ... -->
+</DatePicker.Root>
+```
+
+## Customization
+
+`DatePicker` is composed from three Bits UI primitives. Refer to their individual documentation for full customization details:
+
+- [Date Field](/components/date-field) — segment editing, granularity, locale
+- [Calendar](/components/calendar) — month display, weekday format, date constraints
+- [Popover](/components/popover) — positioning, animations, portal behavior
+
+## API Reference
+
+### DatePicker.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `DateValue` | `undefined` | The selected date. Bindable. |
+| `placeholder` | `DateValue` | current date | Calendar start month when no value is selected. Bindable. |
+| `open` | `boolean` | `false` | Controls popover open state. Bindable. |
+| `granularity` | `"day" \| "hour" \| "minute" \| "second"` | `"day"` | Which time segments to show in the field. |
+| `locale` | `string` | `'en'` | BCP 47 locale for formatting. |
+| `hourCycle` | `12 \| 24` | locale default | 12 or 24-hour time display. |
+| `hideTimeZone` | `boolean` | `false` | Hides the timezone segment. |
+| `minValue` | `DateValue` | `undefined` | Earliest selectable date. |
+| `maxValue` | `DateValue` | `undefined` | Latest selectable date. |
+| `disabled` | `boolean` | `false` | Disables the entire picker. |
+| `readonly` | `boolean` | `false` | Allows navigation, prevents edits. |
+| `readonlySegments` | `EditableSegmentPart[]` | `undefined` | Specific segments to make read-only. |
+| `required` | `boolean` | `false` | Makes the hidden form input required. |
+| `isDateDisabled` | `(date: DateValue) => boolean` | `undefined` | Marks calendar dates as non-interactive. |
+| `isDateUnavailable` | `(date: DateValue) => boolean` | `undefined` | Marks calendar dates as invalid when selected. |
+| `validate` | `(value: DateValue) => string \| string[] \| undefined` | `undefined` | Custom validation function. |
+| `onInvalid` | `(reason, msg?) => void` | `undefined` | Called when the value is invalid. |
+| `closeOnDateSelect` | `boolean` | `true` | Closes popover when a date is selected. |
+| `numberOfMonths` | `number` | `1` | Number of calendar months to display. |
+| `pagedNavigation` | `boolean` | `false` | Advances all visible months at once. |
+| `weekStartsOn` | `0–6` | `0` | First day of the week. |
+| `weekdayFormat` | `"long" \| "short" \| "narrow"` | `"narrow"` | Format for weekday labels. |
+| `fixedWeeks` | `boolean` | `false` | Always render 6 weeks per month. |
+| `preventDeselect` | `boolean` | `false` | Prevents deselecting without selecting another date. |
+| `calendarLabel` | `string` | `undefined` | Accessible label for the calendar. |
+| `disableDaysOutsideMonth` | `boolean` | `false` | Prevents selecting adjacent-month days. |
+| `initialFocus` | `boolean` | `undefined` | Auto-focuses a date when the picker opens. |
+| `monthFormat` | `Intl.DateTimeFormatOptions["month"]` | `"long"` | Format for month names. |
+| `yearFormat` | `Intl.DateTimeFormatOptions["year"]` | `"numeric"` | Format for year display. |
+| `onValueChange` | `(value: DateValue \| undefined) => void` | `undefined` | Called when value changes. |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes. |
+| `onPlaceholderChange` | `(value: DateValue) => void` | `undefined` | Called when placeholder changes. |
+
+### DatePicker.Label
+
+Associates a text label with the field for accessibility.
+
+### DatePicker.Input
+
+Container for the segment elements. Accepts a `name` prop to enable form submission.
+
+The `children` snippet receives `{ segments: Array<{ part: SegmentPart; value: string }> }`.
+
+### DatePicker.Segment
+
+A single editable date segment (`<span>`). Requires the `part` prop.
+
+### DatePicker.Trigger
+
+A `<button>` that toggles the calendar popover open/closed.
+
+### DatePicker.Content
+
+The popover container. Accepts all Popover content positioning props.
+
+### DatePicker.Calendar
+
+Wrapper for the calendar inside the popover. The `children` snippet receives `{ months, weekdays }`.
+
+### Calendar sub-components inside DatePicker
+
+All calendar sub-components are available with the `DatePicker` prefix:
+
+`DatePicker.Header`, `DatePicker.Heading`, `DatePicker.PrevButton`, `DatePicker.NextButton`, `DatePicker.Grid`, `DatePicker.GridHead`, `DatePicker.GridBody`, `DatePicker.GridRow`, `DatePicker.HeadCell`, `DatePicker.Cell`, `DatePicker.Day`, `DatePicker.MonthSelect`, `DatePicker.YearSelect`
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` types, parsing, and formatting
+- [Date Field](/components/date-field) — segmented text input for dates
+- [Calendar](/components/calendar) — standalone calendar grid
+- [Date Range Picker](/components/date-range-picker) — range selection variant

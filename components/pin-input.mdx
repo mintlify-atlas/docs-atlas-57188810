@@ -1,0 +1,199 @@
+---
+title: "PIN Input: OTP and Multi-Character Segmented Input"
+description: A segmented PIN/OTP input built on an invisible native input, with browser autofill support, paste transformation, pattern validation, and form submission.
+---
+
+The PIN Input component implements the "invisible input" technique: a single native `<input>` element is stretched over the visual cells and handles all keyboard events, clipboard operations, and browser autofill. The `Cell` components are purely presentational — each one renders the character at its position and exposes cursor/focus state for styling. This architecture provides a native-feeling experience while giving you full control over the visual design.
+
+## Installation
+
+```typescript
+import { PinInput } from "bits-ui";
+```
+
+## Usage
+
+### Basic PIN input
+
+```svelte
+<script lang="ts">
+  import { PinInput } from "bits-ui";
+  let value = $state("");
+</script>
+
+<PinInput.Root maxlength={6} bind:value>
+  {#snippet children({ cells })}
+    {#each cells as cell}
+      <PinInput.Cell {cell} />
+    {/each}
+  {/snippet}
+</PinInput.Root>
+```
+
+### With separators
+
+```svelte
+<script lang="ts">
+  import { PinInput } from "bits-ui";
+</script>
+
+<PinInput.Root maxlength={6}>
+  {#snippet children({ cells })}
+    {#each cells as cell, i}
+      <PinInput.Cell {cell} />
+      {#if i === 2}
+        <span aria-hidden="true">–</span>
+      {/if}
+    {/each}
+  {/snippet}
+</PinInput.Root>
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { PinInput } from "bits-ui";
+  let otp = $state("");
+</script>
+
+<button onclick={() => (otp = "123456")}>Autofill</button>
+<PinInput.Root maxlength={6} bind:value={otp}>
+  {#snippet children({ cells })}
+    {#each cells as cell}
+      <PinInput.Cell {cell} />
+    {/each}
+  {/snippet}
+</PinInput.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { PinInput } from "bits-ui";
+  let otp = $state("");
+
+  function getValue() { return otp; }
+  function setValue(v: string) { otp = v; }
+</script>
+
+<PinInput.Root maxlength={6} bind:value={getValue, setValue}>
+  {#snippet children({ cells })}
+    {#each cells as cell}
+      <PinInput.Cell {cell} />
+    {/each}
+  {/snippet}
+</PinInput.Root>
+```
+
+## Auto-submit on complete
+
+Use `onComplete` to trigger an action when all cells are filled — for example, to auto-submit a form.
+
+```svelte
+<script lang="ts">
+  import { PinInput } from "bits-ui";
+  let form = $state<HTMLFormElement>(null!);
+</script>
+
+<form method="POST" bind:this={form}>
+  <PinInput.Root
+    maxlength={6}
+    onComplete={() => form.submit()}
+  >
+    {#snippet children({ cells })}
+      {#each cells as cell}
+        <PinInput.Cell {cell} />
+      {/each}
+    {/snippet}
+  </PinInput.Root>
+</form>
+```
+
+## Paste Transformation
+
+Strip unwanted characters from pasted text before it enters the input.
+
+```svelte
+<PinInput.Root
+  maxlength={6}
+  pasteTransformer={(text) => text.replace(/-/g, "")}
+>
+  <!-- … -->
+</PinInput.Root>
+```
+
+## Patterns
+
+Restrict which characters are accepted using the `pattern` prop. Bits UI exports common patterns:
+
+```svelte
+<script lang="ts">
+  import { PinInput, REGEXP_ONLY_DIGITS } from "bits-ui";
+</script>
+
+<PinInput.Root maxlength={6} pattern={REGEXP_ONLY_DIGITS}>
+  <!-- … -->
+</PinInput.Root>
+```
+
+Available built-in patterns:
+
+| Export | Description |
+|--------|-------------|
+| `REGEXP_ONLY_DIGITS` | Digits 0–9 only |
+| `REGEXP_ONLY_CHARS` | Alphabetic characters only |
+| `REGEXP_ONLY_DIGITS_AND_CHARS` | Alphanumeric characters |
+
+> **Note:** Client-side pattern validation supplements but does not replace server-side validation.
+
+## API Reference
+
+### `PinInput.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `maxlength` | `number` | `6` | Total number of characters / cells. |
+| `value` | `string` | `""` | Current PIN value. Bindable. |
+| `disabled` | `boolean` | `false` | Prevents interaction. |
+| `pattern` | `string \| RegExp` | `undefined` | Restricts accepted characters. |
+| `textalign` | `"left" \| "center" \| "right"` | `"left"` | Alignment of text within the input. |
+| `inputmode` | `string` | `"numeric"` | The `inputmode` attribute on the hidden input. |
+| `autocomplete` | `string` | `"one-time-code"` | The `autocomplete` attribute on the hidden input. |
+| `pasteTransformer` | `(text: string) => string` | `undefined` | Sanitize/transform pasted text before it is applied. |
+| `onComplete` | `() => void` | — | Called when all cells are filled. |
+| `onValueChange` | `(v: string) => void` | — | Called on every value change. |
+| `inputRef` | `HTMLInputElement \| null` | `null` | Bindable reference to the hidden input element. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable reference to the root element. |
+| `children` | `Snippet<[PinInputRootSnippetProps]>` | — | Render the visual cells from the provided `cells` array. |
+
+**Snippet props**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `cells` | `PinInputCell[]` | Array of cell descriptors to render. |
+| `isFocused` | `boolean` | Whether the PIN input is currently focused. |
+| `isHovering` | `boolean` | Whether the PIN input is being hovered. |
+
+### `PinInput.Cell`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `cell` | `PinInputCell` | — | **Required.** Cell descriptor object from the `children` snippet. |
+
+**`PinInputCell` shape**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `char` | `string \| null \| undefined` | The character displayed in this cell. |
+| `isActive` | `boolean` | Whether the cursor is positioned at this cell. |
+| `hasFakeCaret` | `boolean` | Whether to show a fake text cursor in this cell. |
+
+## Accessibility
+
+- The invisible input element retains native keyboard and screen reader behaviour.
+- Set `aria-label` on `PinInput.Root` or provide an adjacent `Label.Root` with a `for` binding to the root's `id`.
+- Browser autofill (OTP SMS) works because the underlying element is a real `<input>` with `autocomplete="one-time-code"` by default.

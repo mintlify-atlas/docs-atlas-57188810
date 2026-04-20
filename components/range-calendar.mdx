@@ -1,0 +1,275 @@
+---
+title: Range Calendar — Date Range Selection for Svelte 5
+description: A headless, accessible calendar for selecting a start and end date range in Svelte 5, with min/max day constraints and disabled-date exclusion.
+---
+
+The `RangeCalendar` component extends the standard calendar grid to support selecting a contiguous range of dates — a start date and an end date — with full keyboard accessibility, locale-aware formatting, and configurable range constraints.
+
+Before using this component, read the [Dates guide](/dates) to understand `DateValue` and `DateRange` types from `@internationalized/date`.
+
+## Installation
+
+The `RangeCalendar` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Usage
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar } from "bits-ui";
+  import type { DateRange } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  let value = $state<DateRange>({
+    start: today(getLocalTimeZone()),
+    end: today(getLocalTimeZone()).add({ days: 7 }),
+  });
+</script>
+
+<RangeCalendar.Root bind:value>
+  {#snippet children({ months, weekdays })}
+    <RangeCalendar.Header>
+      <RangeCalendar.PrevButton />
+      <RangeCalendar.Heading />
+      <RangeCalendar.NextButton />
+    </RangeCalendar.Header>
+
+    {#each months as month}
+      <RangeCalendar.Grid>
+        <RangeCalendar.GridHead>
+          <RangeCalendar.GridRow>
+            {#each weekdays as day}
+              <RangeCalendar.HeadCell>{day}</RangeCalendar.HeadCell>
+            {/each}
+          </RangeCalendar.GridRow>
+        </RangeCalendar.GridHead>
+        <RangeCalendar.GridBody>
+          {#each month.weeks as weekDates}
+            <RangeCalendar.GridRow>
+              {#each weekDates as date}
+                <RangeCalendar.Cell {date} month={month.value}>
+                  <RangeCalendar.Day />
+                </RangeCalendar.Cell>
+              {/each}
+            </RangeCalendar.GridRow>
+          {/each}
+        </RangeCalendar.GridBody>
+      </RangeCalendar.Grid>
+    {/each}
+  {/snippet}
+</RangeCalendar.Root>
+```
+
+## The DateRange Type
+
+The `value` prop accepts a `DateRange` object:
+
+```typescript
+import type { DateRange } from "bits-ui";
+import type { DateValue } from "@internationalized/date";
+
+type DateRange = {
+  start: DateValue | undefined;
+  end: DateValue | undefined;
+};
+```
+
+See the [Dates guide](/dates) for details on `CalendarDate`, `CalendarDateTime`, and `ZonedDateTime`.
+
+## Managing Value State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar, type DateRange } from "bits-ui";
+  import { CalendarDate } from "@internationalized/date";
+
+  let myValue = $state<DateRange>({
+    start: new CalendarDate(2024, 8, 1),
+    end: new CalendarDate(2024, 8, 14),
+  });
+</script>
+
+<RangeCalendar.Root bind:value={myValue}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar, type DateRange } from "bits-ui";
+
+  let myValue = $state<DateRange>({ start: undefined, end: undefined });
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: DateRange) {
+    myValue = newValue;
+  }
+</script>
+
+<RangeCalendar.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## Range Constraints
+
+### Minimum Days
+
+Require users to select at least a certain number of days:
+
+```svelte
+<RangeCalendar.Root minDays={3}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+### Maximum Days
+
+Prevent users from selecting more than a given number of days:
+
+```svelte
+<RangeCalendar.Root maxDays={7}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+### Combined Min and Max
+
+```svelte
+<RangeCalendar.Root minDays={3} maxDays={10}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## Excluding Disabled Dates from Ranges
+
+Set `excludeDisabled` to automatically reset the selection when a disabled date falls within the chosen range:
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar } from "bits-ui";
+  import { isWeekend } from "@internationalized/date";
+</script>
+
+<RangeCalendar.Root
+  excludeDisabled
+  isDateDisabled={(date) => isWeekend(date, "en-US")}
+>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## Validation
+
+### Min/Max Dates
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar } from "bits-ui";
+  import { today, getLocalTimeZone } from "@internationalized/date";
+
+  const todayDate = today(getLocalTimeZone());
+</script>
+
+<RangeCalendar.Root minValue={todayDate}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+### Unavailable Dates
+
+```svelte
+<script lang="ts">
+  import { RangeCalendar } from "bits-ui";
+  import type { DateValue } from "@internationalized/date";
+
+  function isDateUnavailable(date: DateValue) {
+    return date.day === 15;
+  }
+</script>
+
+<RangeCalendar.Root {isDateUnavailable}>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## Multiple Months
+
+Display two months side-by-side for easier range selection:
+
+```svelte
+<RangeCalendar.Root numberOfMonths={2} pagedNavigation>
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## Localization
+
+```svelte
+<RangeCalendar.Root locale="de-DE">
+  <!-- ... -->
+</RangeCalendar.Root>
+```
+
+## API Reference
+
+### RangeCalendar.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `DateRange` | `undefined` | The selected date range `{ start, end }`. Bindable. |
+| `placeholder` | `DateValue` | current date | Controls the displayed month when no range is selected. Bindable. |
+| `minValue` | `DateValue` | `undefined` | The earliest selectable date. |
+| `maxValue` | `DateValue` | `undefined` | The latest selectable date. |
+| `minDays` | `number` | `undefined` | Minimum number of days that must be selected. |
+| `maxDays` | `number` | `undefined` | Maximum number of days that can be selected. |
+| `excludeDisabled` | `boolean` | `false` | Reset range if any date within it becomes disabled. |
+| `disabled` | `boolean` | `false` | Prevents all interaction. |
+| `readonly` | `boolean` | `false` | Allows navigation but not selection. |
+| `locale` | `string` | `'en'` | BCP 47 locale for formatting. |
+| `numberOfMonths` | `number` | `1` | Number of months to display. |
+| `pagedNavigation` | `boolean` | `false` | Advances all visible months at once when navigating. |
+| `weekStartsOn` | `0–6` | `0` | First day of the week (0 = Sunday). |
+| `weekdayFormat` | `"long" \| "short" \| "narrow"` | `"narrow"` | Format for weekday labels. |
+| `fixedWeeks` | `boolean` | `false` | Always render 6 weeks per month. |
+| `isDateDisabled` | `(date: DateValue) => boolean` | `undefined` | Marks dates as non-interactive. |
+| `isDateUnavailable` | `(date: DateValue) => boolean` | `undefined` | Marks dates as invalid when included in range. |
+| `preventDeselect` | `boolean` | `false` | Prevents deselecting without selecting another range. |
+| `calendarLabel` | `string` | `undefined` | Accessible label for screen readers. |
+| `disableDaysOutsideMonth` | `boolean` | `false` | Prevents selecting days from adjacent months. |
+| `initialFocus` | `boolean` | `undefined` | Auto-focuses a date on mount. |
+| `monthFormat` | `Intl.DateTimeFormatOptions["month"]` | `"long"` | Format for month names. |
+| `yearFormat` | `Intl.DateTimeFormatOptions["year"]` | `"numeric"` | Format for year display. |
+| `onValueChange` | `(value: DateRange) => void` | `undefined` | Called when the range changes. |
+| `onPlaceholderChange` | `(value: DateValue) => void` | `undefined` | Called when the placeholder changes. |
+
+### Sub-components
+
+`RangeCalendar` shares all sub-components with `Calendar`:
+
+- **RangeCalendar.Header** — `<header>` wrapping navigation controls
+- **RangeCalendar.Heading** — current month/year display
+- **RangeCalendar.PrevButton / NextButton** — navigation buttons
+- **RangeCalendar.Grid** — `<table>` for a month's day grid
+- **RangeCalendar.GridHead / GridBody** — `<thead>` / `<tbody>` wrappers
+- **RangeCalendar.GridRow** — `<tr>` for header or day rows
+- **RangeCalendar.HeadCell** — `<th>` weekday label
+- **RangeCalendar.Cell** — `<td>` for a single day (requires `date` and `month` props)
+- **RangeCalendar.Day** — interactive day element inside a `Cell`
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` and `DateRange` types explained
+- [Calendar](/components/calendar) — single/multiple date selection
+- [Date Range Picker](/components/date-range-picker) — range calendar combined with a popover field
+- [Date Range Field](/components/date-range-field) — text input for date ranges

@@ -1,0 +1,359 @@
+---
+title: "Navigation Menu: Animated Site Navigation with Dropdowns"
+description: "A responsive navigation component with animated dropdown content panels, a shared viewport, and support for vertical orientation and nested submenus."
+---
+
+The Navigation Menu component provides a horizontal (or vertical) navigation bar where each item can reveal rich dropdown content in a shared animated panel called the Viewport. Unlike a Dropdown Menu, Navigation Menu is designed for page-level navigation: it supports `Link` items with active state tracking, animated transitions between content panels using CSS custom properties, and optional `Indicator` elements for visual feedback. Content can also be rendered directly without a Viewport.
+
+## Installation
+
+```typescript
+import { NavigationMenu } from "bits-ui";
+```
+
+## Usage
+
+### Basic structure
+
+```svelte
+<script lang="ts">
+  import { NavigationMenu } from "bits-ui";
+</script>
+
+<NavigationMenu.Root>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Products</NavigationMenu.Trigger>
+      <NavigationMenu.Content>
+        <NavigationMenu.Link href="/products/one">Product One</NavigationMenu.Link>
+        <NavigationMenu.Link href="/products/two">Product Two</NavigationMenu.Link>
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
+
+    <NavigationMenu.Item>
+      <NavigationMenu.Link href="/about">About</NavigationMenu.Link>
+    </NavigationMenu.Item>
+
+    <NavigationMenu.Indicator />
+  </NavigationMenu.List>
+
+  <NavigationMenu.Viewport />
+</NavigationMenu.Root>
+```
+
+### Full component tree
+
+```svelte
+<script lang="ts">
+  import { NavigationMenu } from "bits-ui";
+</script>
+
+<NavigationMenu.Root>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger />
+      <NavigationMenu.Content />
+    </NavigationMenu.Item>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger />
+      <NavigationMenu.Content>
+        <NavigationMenu.Link />
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
+    <NavigationMenu.Item>
+      <NavigationMenu.Link />
+    </NavigationMenu.Item>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger />
+      <NavigationMenu.Content>
+        <NavigationMenu.Sub>
+          <NavigationMenu.List />
+          <NavigationMenu.Viewport />
+        </NavigationMenu.Sub>
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
+    <NavigationMenu.Indicator />
+  </NavigationMenu.List>
+  <NavigationMenu.Viewport />
+</NavigationMenu.Root>
+```
+
+## Vertical orientation
+
+Set `orientation="vertical"` on `Root` to stack items vertically:
+
+```svelte
+<NavigationMenu.Root orientation="vertical">
+  <!-- ... -->
+</NavigationMenu.Root>
+```
+
+## Viewport
+
+The `Viewport` component is where active `Content` is rendered. Placing it outside the `List` gives you control over the DOM structure and enables smooth animated transitions between content panels without a full close/open cycle.
+
+```svelte
+<NavigationMenu.Root>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Item one</NavigationMenu.Trigger>
+      <NavigationMenu.Content>Item one content</NavigationMenu.Content>
+    </NavigationMenu.Item>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Item two</NavigationMenu.Trigger>
+      <NavigationMenu.Content>Item two content</NavigationMenu.Content>
+    </NavigationMenu.Item>
+  </NavigationMenu.List>
+
+  <!-- Active content renders here -->
+  <NavigationMenu.Viewport />
+</NavigationMenu.Root>
+```
+
+The Viewport is optional. If you omit it, each `Content` renders inline inside the `List`.
+
+## Indicator
+
+`Indicator` renders an element positioned under the currently active trigger. Use it to create an animated arrow or highlight that tracks focus across the navigation bar.
+
+```svelte
+<NavigationMenu.List>
+  <NavigationMenu.Item>
+    <NavigationMenu.Trigger>Item one</NavigationMenu.Trigger>
+    <NavigationMenu.Content>Item one content</NavigationMenu.Content>
+  </NavigationMenu.Item>
+  <NavigationMenu.Item>
+    <NavigationMenu.Trigger>Item two</NavigationMenu.Trigger>
+    <NavigationMenu.Content>Item two content</NavigationMenu.Content>
+  </NavigationMenu.Item>
+
+  <NavigationMenu.Indicator />
+</NavigationMenu.List>
+```
+
+## Open on hover
+
+By default, `NavigationMenu.Content` opens when the trigger is hovered. Set `openOnHover={false}` on an `Item` to require an explicit click instead.
+
+When `openOnHover` is `false`, the content will not close when the pointer leaves — the user must interact outside the menu or press Escape to close it.
+
+```svelte
+<NavigationMenu.Item openOnHover={false}>
+  <NavigationMenu.Trigger>Item one</NavigationMenu.Trigger>
+  <NavigationMenu.Content>Item one content</NavigationMenu.Content>
+</NavigationMenu.Item>
+```
+
+## Submenus
+
+Nest a `NavigationMenu.Sub` inside a `Content` element to create a submenu. Use `NavigationMenu.Sub` in place of `NavigationMenu.Root` for the nested level.
+
+```svelte
+<NavigationMenu.Root>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Item one</NavigationMenu.Trigger>
+      <NavigationMenu.Content>
+        <NavigationMenu.Sub>
+          <NavigationMenu.List>
+            <NavigationMenu.Item>
+              <NavigationMenu.Trigger>Subitem one</NavigationMenu.Trigger>
+              <NavigationMenu.Content>Subitem one content</NavigationMenu.Content>
+            </NavigationMenu.Item>
+          </NavigationMenu.List>
+        </NavigationMenu.Sub>
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
+  </NavigationMenu.List>
+</NavigationMenu.Root>
+```
+
+You can also place a `NavigationMenu.Viewport` inside a `Sub` to create a viewport dedicated to that submenu:
+
+```svelte
+<NavigationMenu.Sub>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Subitem one</NavigationMenu.Trigger>
+      <NavigationMenu.Content>
+        <NavigationMenu.Link>Subitem one content</NavigationMenu.Link>
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
+  </NavigationMenu.List>
+  <NavigationMenu.Viewport />
+</NavigationMenu.Sub>
+```
+
+## Advanced animation
+
+Bits UI exposes `--bits-navigation-menu-viewport-width` and `--bits-navigation-menu-viewport-height` CSS custom properties on the `Viewport`, and `data-motion` attributes (`from-start`, `to-start`, `from-end`, `to-end`) on `Content` elements. These let you animate both the viewport size and the enter/exit direction of content panels.
+
+```svelte
+<NavigationMenu.Root>
+  <NavigationMenu.List>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Item one</NavigationMenu.Trigger>
+      <NavigationMenu.Content class="nav-content">Item one content</NavigationMenu.Content>
+    </NavigationMenu.Item>
+    <NavigationMenu.Item>
+      <NavigationMenu.Trigger>Item two</NavigationMenu.Trigger>
+      <NavigationMenu.Content class="nav-content">Item two content</NavigationMenu.Content>
+    </NavigationMenu.Item>
+  </NavigationMenu.List>
+
+  <NavigationMenu.Viewport class="nav-viewport" />
+</NavigationMenu.Root>
+```
+
+```css
+.nav-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation-duration: 250ms;
+  animation-timing-function: ease;
+}
+.nav-content[data-motion="from-start"] { animation-name: enter-from-left; }
+.nav-content[data-motion="from-end"]   { animation-name: enter-from-right; }
+.nav-content[data-motion="to-start"]   { animation-name: exit-to-left; }
+.nav-content[data-motion="to-end"]     { animation-name: exit-to-right; }
+
+.nav-viewport {
+  position: relative;
+  width: var(--bits-navigation-menu-viewport-width);
+  height: var(--bits-navigation-menu-viewport-height);
+  transition: width 250ms ease, height 250ms ease;
+}
+
+@keyframes enter-from-right {
+  from { opacity: 0; transform: translateX(200px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes enter-from-left {
+  from { opacity: 0; transform: translateX(-200px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes exit-to-right {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(200px); }
+}
+@keyframes exit-to-left {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-200px); }
+}
+```
+
+## Force mounting
+
+Set `forceMount` on `Content` and/or `Viewport` to keep them in the DOM regardless of open state. This is useful for SEO — links within the menu will remain crawlable.
+
+When `forceMount` is used, you must manage visibility yourself using the `data-state` attribute on the respective elements.
+
+```svelte
+<NavigationMenu.Content forceMount />
+<NavigationMenu.Viewport forceMount />
+```
+
+See [Styling](/styling) for guidance on using `data-state` for conditional visibility.
+
+## API Reference
+
+### Root
+
+The root element that manages active-item state and provides context for all child components.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Value of the currently open item. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the active item changes. |
+| `delayDuration` | `number` | `200` | Delay in ms before content opens on hover. |
+| `skipDelayDuration` | `number` | `300` | Grace period in ms to move between triggers without re-triggering the delay. |
+| `dir` | `"ltr" \| "rtl"` | `"ltr"` | Reading direction of the menu. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Orientation of the navigation menu. |
+
+### List
+
+The container for `Item` elements, rendered as a `<ul>`. The `child` snippet provides `{ wrapperProps }` which must be spread onto a wrapper element when a custom layout is needed.
+
+### Item
+
+A single navigation entry. Can contain a `Trigger` + `Content` pair, or a standalone `Link`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Unique identifier for this item, used by `Root` to track the active item. |
+| `openOnHover` | `boolean` | `true` | Whether the content opens when the trigger is hovered. |
+
+### Trigger
+
+The button that opens its parent `Item`'s content.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `disabled` | `boolean \| null` | `false` | Prevents opening the content when `true`. |
+
+### Content
+
+The panel of content associated with a `Trigger`. Rendered inside `Viewport` when one is present.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the element in the DOM even when inactive. |
+| `onInteractOutside` | `(event: PointerEvent) => void` | — | Fires when a pointer event occurs outside the content. |
+| `onFocusOutside` | `(event: FocusEvent) => void` | — | Fires when focus moves outside the content. |
+| `onEscapeKeydown` | `(event: KeyboardEvent) => void` | — | Fires when Escape is pressed. |
+| `escapeKeydownBehavior` | `"close" \| "ignore"` | `"close"` | Behavior when Escape is pressed. |
+| `interactOutsideBehavior` | `"close" \| "ignore"` | `"close"` | Behavior when interaction occurs outside. |
+
+### Link
+
+A navigable link item. Renders an `<a>` element and closes the menu when activated.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `active` | `boolean` | `false` | Marks the link as the current page (`aria-current="page"`). |
+| `onSelect` | `(event: Event) => void` | — | Callback fired when the link is clicked. Call `event.preventDefault()` to cancel. |
+
+### Indicator
+
+An optional element positioned beneath the active trigger. Useful for animated arrows or underlines.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the indicator in the DOM even when inactive. |
+
+### Viewport
+
+A container where `Content` elements are displayed. Exposes `--bits-navigation-menu-viewport-width` and `--bits-navigation-menu-viewport-height` CSS variables.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the viewport in the DOM even when no content is active. |
+
+### Sub
+
+A nested navigation menu. Used in place of `Root` when nesting inside a `Content` element.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Value of the currently open item within this submenu. Supports `bind:value`. |
+| `onValueChange` | `(value: string) => void` | — | Callback fired when the active submenu item changes. |
+| `orientation` | `"horizontal" \| "vertical"` | — | Orientation of the submenu. |
+
+## Accessibility
+
+The Navigation Menu follows the [ARIA Navigation pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/).
+
+The root element has `role="navigation"` and an accessible label. Tab focus is managed automatically between the `List` and the active `Content`.
+
+| Key | Behavior |
+|-----|----------|
+| `Tab` | Moves focus between triggers and, when a panel is open, into its content links. |
+| `Enter` / `Space` | Opens or closes the focused item's content. |
+| `Escape` | Closes the active content and returns focus to the trigger. |
+| `ArrowDown` / `ArrowRight` | Moves focus to the next trigger (horizontal) or next item in content. |
+| `ArrowUp` / `ArrowLeft` | Moves focus to the previous trigger or previous content item. |
+| `Home` | Moves focus to the first trigger. |
+| `End` | Moves focus to the last trigger. |
+
+Active `Link` items should have `active={true}` set so that `aria-current="page"` is applied correctly for screen readers.

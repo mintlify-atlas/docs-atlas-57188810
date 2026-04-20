@@ -1,0 +1,77 @@
+---
+title: "WithoutChild: Remove the child snippet prop from types"
+description: "A type helper that strips the child snippet prop from a component's props type, used when building wrappers that control element rendering themselves."
+---
+
+`WithoutChild` is a TypeScript type helper that removes the `child` snippet prop from a component's props type. Use it when building wrapper components that handle element rendering internally and should not expose a `child` snippet to consumers.
+
+The `child` snippet is used by Bits UI's [render delegation](/child-snippet) pattern, which lets you replace a component's default rendered element with your own. When your wrapper already handles that substitution internally, exposing `child` further would be confusing or unsafe — `WithoutChild` removes it from the public API cleanly.
+
+## Type signature
+
+```ts
+type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
+```
+
+<ResponseField name="T" type="type parameter">
+  The component props type from which to remove the `child` prop. If `T` does not have a `child` prop, it is returned unchanged.
+</ResponseField>
+
+## Import
+
+```ts
+import type { WithoutChild } from "bits-ui";
+```
+
+## Usage
+
+### Wrapping a component with a fixed structure
+
+The `Accordion.Header` component accepts a `child` snippet for render delegation. If your wrapper always renders an `Accordion.Trigger` inside, there is no meaningful way to delegate the header element — so remove `child` from the exposed props:
+
+```svelte title="CustomAccordionHeader.svelte"
+<script lang="ts">
+  import { Accordion, type WithoutChild } from "bits-ui";
+  import type { Snippet } from "svelte";
+
+  let { children, ...restProps }: WithoutChild<Accordion.ItemProps> = $props();
+</script>
+
+<Accordion.Header {...restProps}>
+  <Accordion.Trigger>
+    {@render children?.()}
+  </Accordion.Trigger>
+</Accordion.Header>
+```
+
+Consumers of `CustomAccordionHeader` can pass any standard `Accordion.ItemProps` except `child`:
+
+```svelte
+<Accordion.Root>
+  <CustomAccordionHeader value="item-1">
+    {#snippet children()}
+      Section title
+    {/snippet}
+  </CustomAccordionHeader>
+</Accordion.Root>
+```
+
+### Combining with other type helpers
+
+You can compose `WithoutChild` with other helpers when you also want to remove `children` or add a `ref`:
+
+```ts
+import type { WithoutChild, WithElementRef } from "bits-ui";
+import type { Accordion } from "bits-ui";
+
+// Remove child, then add ref support
+type Props = WithElementRef<WithoutChild<Accordion.TriggerProps>, HTMLButtonElement>;
+```
+
+<Note>
+  If the props type you pass to `WithoutChild` does not include a `child` prop, the type is returned as-is without error. The helper is safe to apply defensively.
+</Note>
+
+<Tip>
+  To remove both `child` and `children` in one step, use [`WithoutChildrenOrChild`](/type-helpers/without-children-or-child) instead.
+</Tip>

@@ -1,0 +1,110 @@
+---
+title: "Toggle: Two-State Press Button Primitive"
+description: A single button that switches between pressed and unpressed states, with full support for controlled and two-way binding patterns.
+---
+
+The Toggle component is a single button that maintains an on/off pressed state. It renders a native `<button>` element and exposes `data-state="on"` or `data-state="off"` for styling. For grouping multiple toggles together, see [Toggle Group](/components/toggle-group).
+
+## Installation
+
+```typescript
+import { Toggle } from "bits-ui";
+```
+
+## Usage
+
+### Basic toggle
+
+```svelte
+<script lang="ts">
+  import { Toggle } from "bits-ui";
+</script>
+
+<Toggle.Root>Bold</Toggle.Root>
+```
+
+### Managing pressed state
+
+#### Two-way binding
+
+Use `bind:pressed` for automatic synchronisation between the toggle and your local state variable.
+
+```svelte
+<script lang="ts">
+  import { Toggle } from "bits-ui";
+
+  let pressed = $state(false);
+</script>
+
+<button onclick={() => (pressed = false)}>Reset</button>
+<Toggle.Root bind:pressed>Bold</Toggle.Root>
+```
+
+#### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) when you need to intercept reads and writes — for example to enforce business rules or sync with an external store.
+
+```svelte
+<script lang="ts">
+  import { Toggle } from "bits-ui";
+
+  let pressed = $state(false);
+
+  function getPressed() {
+    return pressed;
+  }
+
+  function setPressed(newPressed: boolean) {
+    pressed = newPressed;
+  }
+</script>
+
+<Toggle.Root bind:pressed={getPressed, setPressed}>
+  Bold
+</Toggle.Root>
+```
+
+### Disabled toggle
+
+```svelte
+<Toggle.Root disabled>Unavailable</Toggle.Root>
+```
+
+## API Reference
+
+### `Toggle.Root`
+
+The single component of this primitive. Renders a `<button>` element.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `pressed` | `boolean` | `false` | Whether the toggle is in the pressed (on) state. Bindable. |
+| `onPressedChange` | `(pressed: boolean) => void` | — | Called when the pressed state changes. |
+| `disabled` | `boolean \| null` | `false` | Prevents interaction and marks the button as disabled. |
+| `ref` | `HTMLButtonElement \| null` | `null` | Bindable reference to the underlying `<button>` element. |
+| `children` | `Snippet` | — | Button label or icon content. |
+| `child` | `Snippet<[{ props: Record<string, unknown> }]>` | — | Render delegation snippet. |
+
+The `children` snippet also receives `{ pressed: boolean }` so you can conditionally render content based on state:
+
+```svelte
+<Toggle.Root>
+  {#snippet children({ pressed })}
+    {pressed ? "On" : "Off"}
+  {/snippet}
+</Toggle.Root>
+```
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-state` | `"on"` when pressed, `"off"` when not pressed. |
+| `data-disabled` | Present when the toggle is disabled. |
+| `data-toggle-root` | Present on the root element. |
+
+## Accessibility
+
+- The component renders a native `<button>`, so it is keyboard focusable and activated by `Space` or `Enter` by default.
+- The pressed state is communicated via `aria-pressed="true"` or `aria-pressed="false"` automatically.
+- Provide a visible label or `aria-label` when the toggle contains only an icon.

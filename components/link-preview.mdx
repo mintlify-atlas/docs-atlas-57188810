@@ -1,0 +1,259 @@
+---
+title: "Link Preview: Hover Previews for Links in Svelte 5 Apps"
+description: "Display a floating preview when users hover over a link in Svelte 5. Built on Floating UI with open/close delays, custom anchor support, and Svelte transitions."
+---
+
+The Link Preview component shows a floating preview panel when a user hovers over a link, allowing them to see context about the destination without navigating away. It uses [Floating UI](https://floating-ui.com/) for positioning and opens only on pointer hover — it is not accessible via keyboard or touch.
+
+<Warning>
+  Link Preview is intended for mouse and pointing device users only. It does not respond to touch events, and the preview content cannot be accessed via the keyboard. On touch devices, the link will be followed immediately. Because it is not accessible to all users, the preview should not contain vital information.
+</Warning>
+
+## Installation
+
+```bash
+npm install bits-ui
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { LinkPreview } from "bits-ui";
+</script>
+
+<LinkPreview.Root>
+  <LinkPreview.Trigger href="https://bits-ui.com">
+    bits-ui.com
+  </LinkPreview.Trigger>
+  <LinkPreview.Portal>
+    <LinkPreview.Content>
+      <LinkPreview.Arrow />
+      <p>Headless UI components for Svelte 5.</p>
+    </LinkPreview.Content>
+  </LinkPreview.Portal>
+</LinkPreview.Root>
+```
+
+## Component structure
+
+```svelte
+<LinkPreview.Root>
+  <LinkPreview.Trigger />
+  <LinkPreview.Portal>
+    <LinkPreview.Content>
+      <LinkPreview.Arrow />
+    </LinkPreview.Content>
+  </LinkPreview.Portal>
+</LinkPreview.Root>
+```
+
+The `LinkPreview.Trigger` renders as an `<a>` element. `LinkPreview.Portal` and `LinkPreview.Arrow` are optional.
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { LinkPreview } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<LinkPreview.Root bind:open={isOpen}>
+  <!-- ... -->
+</LinkPreview.Root>
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { LinkPreview } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<LinkPreview.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</LinkPreview.Root>
+```
+
+## Open and close delays
+
+Control how quickly the preview appears and disappears using `openDelay` and `closeDelay` on `LinkPreview.Root`:
+
+```svelte
+<LinkPreview.Root openDelay={500} closeDelay={200}>
+  <LinkPreview.Trigger href="https://bits-ui.com">bits-ui.com</LinkPreview.Trigger>
+  <LinkPreview.Content>
+    <!-- preview content -->
+  </LinkPreview.Content>
+</LinkPreview.Root>
+```
+
+The defaults are `openDelay: 700`ms and `closeDelay: 300`ms.
+
+## Escape key handling
+
+By default, pressing `Escape` closes the preview. Use `escapeKeydownBehavior` to change this:
+
+```svelte
+<LinkPreview.Content escapeKeydownBehavior="ignore">
+  <!-- ... -->
+</LinkPreview.Content>
+```
+
+For a custom handler:
+
+```svelte
+<LinkPreview.Content onEscapeKeydown={(e) => e.preventDefault()}>
+  <!-- ... -->
+</LinkPreview.Content>
+```
+
+## Interaction outside
+
+By default, interacting outside the content closes the preview. To prevent this:
+
+```svelte
+<LinkPreview.Content interactOutsideBehavior="ignore">
+  <!-- ... -->
+</LinkPreview.Content>
+```
+
+## Custom anchor
+
+By default, `LinkPreview.Content` is anchored to `LinkPreview.Trigger`. Pass a selector string or element to `customAnchor` to anchor it to a different element:
+
+```svelte
+<script lang="ts">
+  import { LinkPreview } from "bits-ui";
+  let customAnchor = $state<HTMLElement>(null!);
+</script>
+
+<div bind:this={customAnchor}></div>
+
+<LinkPreview.Root>
+  <LinkPreview.Trigger />
+  <LinkPreview.Content {customAnchor}>
+    <!-- ... -->
+  </LinkPreview.Content>
+</LinkPreview.Root>
+```
+
+## Static positioning
+
+To opt out of Floating UI positioning entirely, use `LinkPreview.ContentStatic`:
+
+```svelte
+<LinkPreview.Root>
+  <LinkPreview.Trigger />
+  <LinkPreview.ContentStatic>
+    <!-- position this yourself with CSS -->
+  </LinkPreview.ContentStatic>
+</LinkPreview.Root>
+```
+
+<Note>
+  `LinkPreview.Arrow` is designed for use with `LinkPreview.Content` (Floating UI). It may behave unexpectedly with `LinkPreview.ContentStatic`.
+</Note>
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions. The `child` snippet for floating content exposes `wrapperProps`, `props`, and `open`. Spread `wrapperProps` onto the outer element and `props` onto the inner content element.
+
+```svelte
+<script lang="ts">
+  import { LinkPreview } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<LinkPreview.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly>
+          <!-- preview content -->
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</LinkPreview.Content>
+```
+
+<Note>
+  Floating content components use a two-element structure internally. `wrapperProps` must be spread onto the outer div so Floating UI can correctly position the panel. See the [child snippet guide](/child-snippet) and [transitions guide](/transitions) for more.
+</Note>
+
+## API reference
+
+### LinkPreview.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the link preview. |
+| `onOpenChange` | `(open: boolean) => void` | — | Called when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Called when the open/close animation completes. |
+| `openDelay` | `number` | `700` | Delay in ms before the preview opens on hover. |
+| `closeDelay` | `number` | `300` | Delay in ms before the preview closes after hover ends. |
+| `disabled` | `boolean` | `false` | Disable the preview entirely. |
+| `ignoreNonKeyboardFocus` | `boolean` | `false` | Only open on keyboard focus, not pointer focus. |
+
+### LinkPreview.Trigger
+
+Renders as an `<a>` element. Accepts all standard anchor attributes plus `child` snippet for customization.
+
+### LinkPreview.Portal
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| Element` | `document.body` | Where to portal the content. |
+| `disabled` | `boolean` | `false` | Disable portalling and render inline. |
+
+### LinkPreview.Content
+
+`LinkPreview.Content` uses Floating UI for positioning. The `child` snippet exposes `wrapperProps`, `props`, and `open`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'bottom'` | Preferred side to render against the trigger. |
+| `sideOffset` | `number` | `0` | Distance in pixels from the trigger. |
+| `align` | `'start' \| 'center' \| 'end'` | `'center'` | Alignment relative to the trigger. |
+| `alignOffset` | `number` | `0` | Offset from start or end alignment. |
+| `avoidCollisions` | `boolean` | `true` | Override placement to avoid viewport collisions. |
+| `collisionBoundary` | `Element \| Element[]` | — | Elements to check for collisions. |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>` | `8` | Virtual padding around the viewport edge. |
+| `arrowPadding` | `number` | `0` | Padding between arrow and floating element edges. |
+| `sticky` | `'partial' \| 'always'` | — | Sticky behavior when the trigger scrolls out of view. |
+| `hideWhenDetached` | `boolean` | `false` | Hide content when the trigger is not visible. |
+| `customAnchor` | `string \| HTMLElement` | — | Anchor to a different element instead of the trigger. |
+| `forceMount` | `boolean` | `false` | Keep content mounted when closed. Use with `child` snippet. |
+| `escapeKeydownBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when Escape is pressed. |
+| `onEscapeKeydown` | `(e: KeyboardEvent) => void` | — | Custom handler for Escape key press. |
+| `interactOutsideBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when interacting outside content. |
+| `onInteractOutside` | `(e: PointerEvent) => void` | — | Custom handler for outside interactions. |
+
+### LinkPreview.ContentStatic
+
+Renders link preview content without Floating UI. Position entirely via CSS.
+
+### LinkPreview.Arrow
+
+Renders an SVG arrow pointing toward the trigger. Only works with `LinkPreview.Content`, not `LinkPreview.ContentStatic`.
+
+## Accessibility
+
+- Link Preview is intentionally inaccessible to keyboard and touch users.
+- The preview must not contain information that is essential for the user to complete their task — it is supplementary context only.
+- The `LinkPreview.Trigger` renders as a standard `<a>` element so keyboard users can still follow the link.
+- Screen readers do not announce the preview panel.

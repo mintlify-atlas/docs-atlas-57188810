@@ -1,0 +1,200 @@
+---
+title: "Radio Group: Single-Selection Option Set Control"
+description: A group of mutually exclusive radio items with full keyboard navigation, form submission support, and horizontal or vertical orientation.
+---
+
+The Radio Group component presents a set of options where only one can be selected at a time. It renders a hidden `<input type="radio">` for each item when a `name` is provided, making it a drop-in replacement for native radio button groups in HTML forms. Each `RadioGroup.Item` uses a children snippet to let you render any visual indicator you want based on the current `checked` state.
+
+## Installation
+
+```typescript
+import { RadioGroup } from "bits-ui";
+```
+
+## Usage
+
+### Basic radio group
+
+```svelte
+<script lang="ts">
+  import { RadioGroup } from "bits-ui";
+</script>
+
+<RadioGroup.Root>
+  <RadioGroup.Item value="apple">
+    {#snippet children({ checked })}
+      {#if checked}● Apple{:else}○ Apple{/if}
+    {/snippet}
+  </RadioGroup.Item>
+  <RadioGroup.Item value="banana">
+    {#snippet children({ checked })}
+      {#if checked}● Banana{:else}○ Banana{/if}
+    {/snippet}
+  </RadioGroup.Item>
+</RadioGroup.Root>
+```
+
+### Reusable component
+
+```svelte title="MyRadioGroup.svelte"
+<script lang="ts">
+  import {
+    RadioGroup,
+    Label,
+    type WithoutChildrenOrChild,
+    useId,
+  } from "bits-ui";
+
+  type Item = { value: string; label: string; disabled?: boolean };
+  type Props = WithoutChildrenOrChild<RadioGroup.RootProps> & { items: Item[] };
+
+  let {
+    value = $bindable(""),
+    ref = $bindable(null),
+    items,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<RadioGroup.Root bind:value bind:ref {...restProps}>
+  {#each items as item}
+    {@const id = useId()}
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <RadioGroup.Item {id} value={item.value} disabled={item.disabled}>
+        {#snippet children({ checked })}
+          {checked ? "●" : "○"}
+        {/snippet}
+      </RadioGroup.Item>
+      <Label.Root for={id}>{item.label}</Label.Root>
+    </div>
+  {/each}
+</RadioGroup.Root>
+```
+
+```svelte title="+page.svelte"
+<script lang="ts">
+  import MyRadioGroup from "$lib/components/MyRadioGroup.svelte";
+
+  const fruits = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+    { value: "coconut", label: "Coconut", disabled: true },
+  ];
+</script>
+
+<MyRadioGroup items={fruits} name="favoriteFruit" />
+```
+
+## Managing Value State
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { RadioGroup } from "bits-ui";
+  let fruit = $state("apple");
+</script>
+
+<button onclick={() => (fruit = "banana")}>Select Banana</button>
+
+<RadioGroup.Root bind:value={fruit}>
+  <!-- items -->
+</RadioGroup.Root>
+```
+
+### Fully controlled
+
+```svelte
+<script lang="ts">
+  import { RadioGroup } from "bits-ui";
+  let fruit = $state("apple");
+
+  function getValue() { return fruit; }
+  function setValue(v: string) { fruit = v; }
+</script>
+
+<RadioGroup.Root bind:value={getValue, setValue}>
+  <!-- items -->
+</RadioGroup.Root>
+```
+
+## HTML Forms
+
+Setting `name` on `RadioGroup.Root` renders a hidden `<input type="radio">` for each item, submitted with the selected value.
+
+```svelte
+<form method="POST">
+  <RadioGroup.Root name="favoriteFruit">
+    <RadioGroup.Item value="apple">
+      {#snippet children({ checked })}Apple{/snippet}
+    </RadioGroup.Item>
+    <RadioGroup.Item value="banana">
+      {#snippet children({ checked })}Banana{/snippet}
+    </RadioGroup.Item>
+  </RadioGroup.Root>
+  <button type="submit">Submit</button>
+</form>
+```
+
+Add `required` to enforce selection before submission.
+
+## Orientation
+
+The `orientation` prop controls keyboard arrow-key navigation direction.
+
+```svelte
+<!-- Vertical: ArrowUp / ArrowDown -->
+<RadioGroup.Root orientation="vertical"><!-- … --></RadioGroup.Root>
+
+<!-- Horizontal: ArrowLeft / ArrowRight -->
+<RadioGroup.Root orientation="horizontal"><!-- … --></RadioGroup.Root>
+```
+
+## Disabled and Readonly
+
+```svelte
+<!-- Entire group disabled — non-focusable -->
+<RadioGroup.Root disabled><!-- … --></RadioGroup.Root>
+
+<!-- Readonly — focusable and navigable, but selection is locked -->
+<RadioGroup.Root readonly><!-- … --></RadioGroup.Root>
+
+<!-- Single item disabled -->
+<RadioGroup.Root>
+  <RadioGroup.Item value="locked" disabled>
+    {#snippet children({ checked })}Locked option{/snippet}
+  </RadioGroup.Item>
+</RadioGroup.Root>
+```
+
+## API Reference
+
+### `RadioGroup.Root`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | `""` | Currently selected item value. Bindable. |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Determines arrow-key navigation axis. |
+| `name` | `string` | `undefined` | Enables hidden radio inputs for form submission. |
+| `required` | `boolean` | `false` | Marks the hidden input as required. |
+| `disabled` | `boolean` | `false` | Disables the entire group. |
+| `readonly` | `boolean` | `false` | Allows focus/navigation but prevents selection changes. |
+| `loop` | `boolean` | `false` | Whether keyboard navigation wraps around. |
+| `onValueChange` | `(v: string) => void` | — | Called when the selected value changes. |
+| `ref` | `HTMLElement \| null` | `null` | Bindable DOM reference. |
+
+### `RadioGroup.Item`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | **Required.** The value this item represents. |
+| `disabled` | `boolean` | `false` | Disables this specific item. |
+| `children` | `Snippet<[{ checked: boolean }]>` | — | Render the item indicator based on checked state. |
+
+## Accessibility
+
+- The root element has `role="radiogroup"`.
+- Each item has `role="radio"` with `aria-checked`.
+- Arrow keys navigate between items; `Tab` enters and leaves the group.
+- Use `aria-label` or `aria-labelledby` on the root when there is no visible group heading.
+- Disabled items are unfocusable (`tabindex="-1"`, `aria-disabled="true"`).

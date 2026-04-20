@@ -1,0 +1,334 @@
+---
+title: "Popover: Floating Panels Anchored to Triggers in Svelte"
+description: "A floating popover panel for Svelte 5, powered by Floating UI. Supports hover open, custom anchors, portals, scroll lock, and Svelte transitions."
+---
+
+The Popover component displays rich content in a floating panel anchored to a trigger element. It uses [Floating UI](https://floating-ui.com/) for positioning and handles collision detection, alignment, and arrow placement automatically.
+
+## Installation
+
+```bash
+npm install bits-ui
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+</script>
+
+<Popover.Root>
+  <Popover.Trigger>Open Popover</Popover.Trigger>
+  <Popover.Portal>
+    <Popover.Content>
+      <p>Popover content goes here.</p>
+      <Popover.Close>Close</Popover.Close>
+      <Popover.Arrow />
+    </Popover.Content>
+  </Popover.Portal>
+</Popover.Root>
+```
+
+## Component structure
+
+```svelte
+<Popover.Root>
+  <Popover.Trigger />
+  <Popover.Portal>
+    <Popover.Overlay />
+    <Popover.Content>
+      <Popover.Close />
+      <Popover.Arrow />
+    </Popover.Content>
+  </Popover.Portal>
+</Popover.Root>
+```
+
+`Popover.Portal` renders its children outside the normal DOM hierarchy. The `Popover.Overlay` and `Popover.Arrow` are optional.
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open Popover</button>
+
+<Popover.Root bind:open={isOpen}>
+  <!-- ... -->
+</Popover.Root>
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control:
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<Popover.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</Popover.Root>
+```
+
+## Open on hover
+
+Set `openOnHover` on `Popover.Trigger` to open the popover when the user hovers over the trigger:
+
+```svelte
+<Popover.Root>
+  <Popover.Trigger openOnHover>@huntabyte</Popover.Trigger>
+  <Popover.Content>
+    <!-- profile card content -->
+  </Popover.Content>
+</Popover.Root>
+```
+
+You can control timing with `openDelay` (default: `700`ms) and `closeDelay` (default: `300`ms):
+
+```svelte
+<Popover.Trigger openOnHover openDelay={400} closeDelay={200}>
+  Hover me
+</Popover.Trigger>
+```
+
+**Behavior notes:**
+
+- If the user clicks the trigger while the popover is open via hover, it converts to click-opened mode and only closes via Escape or clicking outside.
+- Clicking or focusing an element inside the content keeps the popover open until explicitly closed.
+- `openOnHover` does not open on keyboard focus. Keyboard users can still press Enter or Space to open.
+- Touch events are ignored for hover to prevent conflicts with tap behavior.
+
+## Focus management
+
+### Focus trap
+
+By default, focus is trapped within `Popover.Content`. To disable:
+
+```svelte
+<Popover.Content trapFocus={false}>
+  <!-- ... -->
+</Popover.Content>
+```
+
+### Customizing initial focus
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<Popover.Root>
+  <Popover.Trigger>Open Popover</Popover.Trigger>
+  <Popover.Content
+    onOpenAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <input type="text" bind:this={nameInput} />
+  </Popover.Content>
+</Popover.Root>
+```
+
+### Customizing close focus
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<input type="text" bind:this={nameInput} />
+<Popover.Root>
+  <Popover.Trigger>Open Popover</Popover.Trigger>
+  <Popover.Content
+    onCloseAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <!-- ... -->
+  </Popover.Content>
+</Popover.Root>
+```
+
+## Scroll lock
+
+By default, users can scroll the body while the popover is open. To prevent this:
+
+```svelte
+<Popover.Content preventScroll={true}>
+  <!-- ... -->
+</Popover.Content>
+```
+
+## Escape key handling
+
+```svelte
+<!-- Prevent closing on Escape -->
+<Popover.Content escapeKeydownBehavior="ignore">
+  <!-- ... -->
+</Popover.Content>
+
+<!-- Custom handler -->
+<Popover.Content onEscapeKeydown={(e) => e.preventDefault()}>
+  <!-- ... -->
+</Popover.Content>
+```
+
+## Interaction outside
+
+By default, pointer-down events outside the content close the popover. To prevent this:
+
+```svelte
+<Popover.Content interactOutsideBehavior="ignore">
+  <!-- ... -->
+</Popover.Content>
+```
+
+For a custom handler:
+
+```svelte
+<Popover.Content onInteractOutside={(e) => e.preventDefault()}>
+  <!-- ... -->
+</Popover.Content>
+```
+
+## Custom anchor
+
+By default, `Popover.Content` is anchored to `Popover.Trigger`. Pass a selector string or element to `customAnchor` to use a different element:
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  let customAnchor = $state<HTMLElement>(null!);
+</script>
+
+<div bind:this={customAnchor}></div>
+
+<Popover.Root>
+  <Popover.Trigger />
+  <Popover.Content {customAnchor}>
+    <!-- ... -->
+  </Popover.Content>
+</Popover.Root>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions. The `child` snippet for floating content components exposes `wrapperProps`, `props`, and `open`. You must spread `wrapperProps` onto the outer wrapper element and `props` onto the inner content element.
+
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
+  import { fly } from "svelte/transition";
+</script>
+
+<Popover.Content forceMount>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props} transition:fly>
+          <!-- popover content -->
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+</Popover.Content>
+```
+
+<Note>
+  Floating content components like `Popover.Content` use a two-element structure internally. The `wrapperProps` must be spread onto the outer div to maintain correct positioning. See the [child snippet guide](/child-snippet) and [transitions guide](/transitions) for more.
+</Note>
+
+## API reference
+
+### Popover.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the popover. |
+| `onOpenChange` | `(open: boolean) => void` | — | Called when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Called when the open/close animation completes. |
+
+### Popover.Trigger
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `openOnHover` | `boolean` | `false` | Open the popover when the trigger is hovered. |
+| `openDelay` | `number` | `700` | Delay in ms before opening on hover. |
+| `closeDelay` | `number` | `300` | Delay in ms before closing after hover ends. |
+
+### Popover.Portal
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| Element` | `document.body` | Where to portal the content. |
+| `disabled` | `boolean` | `false` | Disable portalling and render inline. |
+
+### Popover.Overlay
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the overlay mounted when closed. Use with `child` snippet for transitions. |
+
+### Popover.Content
+
+`Popover.Content` uses Floating UI for positioning. The `child` snippet exposes `wrapperProps`, `props`, and `open`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `side` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'bottom'` | Preferred side to render against the anchor. |
+| `sideOffset` | `number` | `0` | Distance in pixels from the anchor. |
+| `align` | `'start' \| 'center' \| 'end'` | `'center'` | Preferred alignment relative to the anchor. |
+| `alignOffset` | `number` | `0` | Offset from the start or end alignment. |
+| `avoidCollisions` | `boolean` | `true` | Override side/align to avoid viewport collisions. |
+| `collisionBoundary` | `Element \| Element[]` | — | Boundary elements to check for collisions. |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>` | `8` | Virtual padding around the viewport edge. |
+| `arrowPadding` | `number` | `0` | Padding between the arrow and floating element edges. |
+| `sticky` | `'partial' \| 'always'` | — | Sticky behavior when the anchor scrolls out of view. |
+| `hideWhenDetached` | `boolean` | `false` | Hide content when the anchor is not visible. |
+| `customAnchor` | `string \| HTMLElement` | — | Anchor to a different element instead of the trigger. |
+| `forceMount` | `boolean` | `false` | Keep content mounted when closed. Use with `child` snippet. |
+| `trapFocus` | `boolean` | `true` | Trap keyboard focus inside the content. |
+| `preventScroll` | `boolean` | `false` | Prevent body scrolling when open. |
+| `escapeKeydownBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when Escape is pressed. |
+| `onEscapeKeydown` | `(e: KeyboardEvent) => void` | — | Custom handler for Escape key press. |
+| `interactOutsideBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when interacting outside content. |
+| `onInteractOutside` | `(e: PointerEvent) => void` | — | Custom handler for outside interactions. |
+| `onOpenAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on open. |
+| `onCloseAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on close. |
+
+### Popover.Arrow
+
+Renders an SVG arrow pointing toward the anchor. Inherits positioning from Floating UI.
+
+### Popover.Close
+
+Renders a `<button>` that closes the popover. Accepts all standard button attributes.
+
+## Accessibility
+
+- `Popover.Content` receives `role="dialog"`.
+- Focus is trapped inside the popover while it is open.
+- Pressing `Escape` closes the popover by default.
+- Focus returns to the trigger when the popover closes.
+- Use `Popover.Title` and `Popover.Description` (if needed) for screen reader context.

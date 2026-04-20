@@ -1,0 +1,377 @@
+---
+title: Time Field — Accessible Segmented Time Input for Svelte 5
+description: A keyboard-driven, accessible alternative to the native time input for Svelte 5, with segment-by-segment editing, validation, and timezone support.
+---
+
+The `TimeField` component is an accessible alternative to `<input type="time">`. It renders individual, keyboard-navigable segments — hour, minute, second, day period, and optionally timezone — that users edit independently. The value can be a `Time`, `CalendarDateTime`, or `ZonedDateTime` object.
+
+Before using this component, read the [Dates guide](/dates) to understand time-related `DateValue` types from `@internationalized/date`.
+
+## Installation
+
+The `TimeField` component requires the `@internationalized/date` peer dependency:
+
+```bash
+npm install @internationalized/date
+```
+
+## Basic Structure
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+</script>
+
+<TimeField.Root>
+  <TimeField.Label>Check-in time</TimeField.Label>
+  <TimeField.Input>
+    {#snippet children({ segments })}
+      {#each segments as { part, value }}
+        <TimeField.Segment {part}>
+          {value}
+        </TimeField.Segment>
+      {/each}
+    {/snippet}
+  </TimeField.Input>
+</TimeField.Root>
+```
+
+## Reusable Component Pattern
+
+Build a reusable `MyTimeField` wrapper for use throughout your application:
+
+```svelte
+<!-- MyTimeField.svelte -->
+<script lang="ts" module>
+  import type { TimeValue } from "bits-ui";
+  import type { Time } from "@internationalized/date";
+  type T = unknown;
+</script>
+
+<script lang="ts" generics="T extends TimeValue = Time">
+  import { TimeField, type WithoutChildrenOrChild } from "bits-ui";
+
+  let {
+    value = $bindable(),
+    placeholder = $bindable(),
+    labelText = "Select a time",
+    name,
+    ...restProps
+  }: WithoutChildrenOrChild<TimeField.RootProps<T>> & {
+    name?: string;
+    labelText?: string;
+  } = $props();
+</script>
+
+<TimeField.Root bind:value bind:placeholder {...restProps}>
+  <TimeField.Label {name}>{labelText}</TimeField.Label>
+  <TimeField.Input>
+    {#snippet children({ segments })}
+      {#each segments as { part, value }}
+        <TimeField.Segment {part}>
+          {value}
+        </TimeField.Segment>
+      {/each}
+    {/snippet}
+  </TimeField.Input>
+</TimeField.Root>
+```
+
+## Time Value Types
+
+The `TimeField` accepts three types of time values, each providing a different level of detail:
+
+```typescript
+import { Time, CalendarDateTime, now, getLocalTimeZone } from "@internationalized/date";
+
+// Time only (no date, no timezone)
+const timeOnly = new Time(12, 30);
+
+// Date + time (no timezone)
+const dateTime = new CalendarDateTime(2024, 8, 3, 12, 30, 0);
+
+// Date + time + timezone
+const zoned = now("America/New_York");
+```
+
+## Segments
+
+Each segment in a `TimeField` represents one discrete part of the time. Segments can be:
+
+- **Editable**: `hour`, `minute`, `second`, `dayPeriod`, `timeZoneName`
+- **Literal**: separator characters (e.g. `:`) that vary by `locale`
+
+Style literal segments differently from interactive ones to provide clear visual cues.
+
+## Placeholder
+
+The `placeholder` prop is not hint text — it's the initial `TimeValue` used to seed the field's format and starting position when no value is present. By default it is `12:00 AM` (12-hour) or `00:00` (24-hour).
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { Time, now } from "@internationalized/date";
+</script>
+
+<!-- Start at 12:30 PM -->
+<TimeField.Root placeholder={new Time(12, 30)}>
+  <!-- ... -->
+</TimeField.Root>
+
+<!-- Show timezone segment using ZonedDateTime placeholder -->
+<TimeField.Root placeholder={now("America/New_York")}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+## Managing Value State
+
+The `value` prop type is inferred from what you pass. A `Time` value produces a `Time`, `CalendarDateTime` stays `CalendarDateTime`, and so on.
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  let myValue = $state(new Time(12, 30));
+</script>
+
+<button onclick={() => (myValue = myValue.add({ hours: 1 }))}>Add 1 hour</button>
+
+<TimeField.Root bind:value={myValue}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { TimeField, type TimeValue } from "bits-ui";
+
+  let myValue = $state<TimeValue>();
+
+  function getValue() {
+    return myValue;
+  }
+
+  function setValue(newValue: TimeValue | undefined) {
+    myValue = newValue;
+  }
+</script>
+
+<TimeField.Root bind:value={getValue, setValue}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+## Managing Placeholder State
+
+### Two-Way Binding
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  let myPlaceholder = $state(new Time(12, 30));
+</script>
+
+<button onclick={() => (myPlaceholder = new Time(9, 0))}>Set to 9:00 AM</button>
+
+<TimeField.Root bind:placeholder={myPlaceholder}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+### Fully Controlled
+
+```svelte
+<script lang="ts">
+  import { TimeField, type TimeValue } from "bits-ui";
+
+  let myPlaceholder = $state<TimeValue>();
+
+  function getPlaceholder() {
+    return myPlaceholder;
+  }
+
+  function setPlaceholder(newPlaceholder: TimeValue) {
+    myPlaceholder = newPlaceholder;
+  }
+</script>
+
+<TimeField.Root bind:placeholder={getPlaceholder, setPlaceholder}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+## Default Value from a String
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { parseDateTime, parseZonedDateTime } from "@internationalized/date";
+
+  // CalendarDateTime from ISO string
+  let value = $state(parseDateTime("2024-08-03T15:15"));
+
+  // ZonedDateTime from ISO string with timezone
+  // let value = $state(parseZonedDateTime("2024-08-03T15:15[America/New_York]"));
+</script>
+
+<TimeField.Root {value}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+## Granularity
+
+Control which time segments are rendered:
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  const value = new Time(12, 30);
+</script>
+
+<!-- Renders: hour / minute / second -->
+<TimeField.Root granularity="second" {value}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+| Value | Segments rendered |
+|-------|-------------------|
+| `"hour"` | hour, dayPeriod |
+| `"minute"` | + minute (default) |
+| `"second"` | + second |
+
+## Validation
+
+### Min/Max Values
+
+```svelte
+<script lang="ts">
+  import { TimeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
+</script>
+
+<!-- Invalid if time is before 9:00 AM -->
+<TimeField.Root minValue={new Time(9, 0)}>
+  <!-- ... -->
+</TimeField.Root>
+
+<!-- Invalid if time is after 5:00 PM -->
+<TimeField.Root maxValue={new Time(17, 0)}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+### Custom Validation
+
+```svelte
+<script lang="ts">
+  import { TimeField, type TimeValue } from "bits-ui";
+  import { Time } from "@internationalized/date";
+
+  const value = new Time(12, 30);
+
+  function validate(time: TimeValue) {
+    return time.hour === 12 ? "Noon is not available" : undefined;
+  }
+
+  function onInvalid(reason: "min" | "max" | "custom", msg?: string | string[]) {
+    if (reason === "custom") {
+      console.error(msg);
+    } else if (reason === "min") {
+      console.error("Time is too early.");
+    } else if (reason === "max") {
+      console.error("Time is too late.");
+    }
+  }
+</script>
+
+<TimeField.Root {validate} {value} {onInvalid}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+## Hour Cycle
+
+Override the locale's default 12/24-hour format:
+
+```svelte
+<!-- Force 24-hour display -->
+<TimeField.Root hourCycle={24}>
+  <!-- ... -->
+</TimeField.Root>
+```
+
+When using a 12-hour cycle, include the `dayPeriod` segment so users can toggle AM/PM.
+
+## Localization
+
+```svelte
+<TimeField.Root locale="de">
+  <!-- ... -->
+</TimeField.Root>
+```
+
+In German locale (`de`), times are displayed in 24-hour format and the day period segment is omitted.
+
+## API Reference
+
+### TimeField.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `T extends TimeValue` | `undefined` | The selected time. Type is inferred from the value. Bindable. |
+| `placeholder` | `TimeValue` | `12:00 AM` / `00:00` | Determines field format and start position when empty. Bindable. |
+| `granularity` | `"hour" \| "minute" \| "second"` | `"minute"` | Controls which time segments are rendered. |
+| `locale` | `string` | `'en'` | BCP 47 locale string. |
+| `hourCycle` | `12 \| 24` | locale default | 12 or 24-hour time display. |
+| `hideTimeZone` | `boolean` | `false` | Hides the timezone segment for `ZonedDateTime` values. |
+| `minValue` | `TimeValue` | `undefined` | Marks field invalid if value is before this time. |
+| `maxValue` | `TimeValue` | `undefined` | Marks field invalid if value is after this time. |
+| `disabled` | `boolean` | `false` | Disables all interaction. |
+| `readonly` | `boolean` | `false` | Prevents segment editing. |
+| `readonlySegments` | `EditableSegmentPart[]` | `undefined` | Specific segments to make read-only. |
+| `required` | `boolean` | `false` | Makes the hidden form input required. |
+| `validate` | `(value: T) => string \| string[] \| undefined` | `undefined` | Custom validation function. |
+| `onInvalid` | `(reason, msg?) => void` | `undefined` | Called when the value is invalid. |
+| `errorMessageId` | `string` | `undefined` | ID of the element containing error messages. |
+| `onValueChange` | `(value: T \| undefined) => void` | `undefined` | Called when the value changes. |
+| `onPlaceholderChange` | `(value: TimeValue) => void` | `undefined` | Called when the placeholder changes. |
+
+### TimeField.Label
+
+A label element associated with the field for accessibility.
+
+### TimeField.Input
+
+Container for the segment elements. Accepts a `name` prop to enable form submission.
+
+The `children` snippet receives:
+
+```typescript
+{ segments: Array<{ part: TimeSegmentPart; value: string }> }
+```
+
+### TimeField.Segment
+
+A `<span>` representing one time segment. Requires the `part` prop.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `part` | `TimeSegmentPart` | The segment identifier (e.g. `"hour"`, `"minute"`, `"literal"`). |
+
+## Further Reading
+
+- [Dates guide](/dates) — `DateValue` types, parsing, and formatting
+- [Time Range Field](/components/time-range-field) — two time fields for a range
+- [Date Field](/components/date-field) — date segments with optional time

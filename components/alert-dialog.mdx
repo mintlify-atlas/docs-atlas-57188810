@@ -1,0 +1,389 @@
+---
+title: "Alert Dialog: Confirmation Modals for Svelte 5 Apps"
+description: "An accessible alert dialog for Svelte 5 that requires user acknowledgment. Ideal for destructive actions and form confirmations with Cancel and Action buttons."
+---
+
+The Alert Dialog component presents critical information that requires a user response before the application can continue. Unlike a regular Dialog, clicking outside the alert dialog does not close it — the user must explicitly choose an action.
+
+## Installation
+
+```bash
+npm install bits-ui
+```
+
+## Usage
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+</script>
+
+<AlertDialog.Root>
+  <AlertDialog.Trigger>Delete account</AlertDialog.Trigger>
+  <AlertDialog.Portal>
+    <AlertDialog.Overlay />
+    <AlertDialog.Content>
+      <AlertDialog.Title>Delete your account</AlertDialog.Title>
+      <AlertDialog.Description>
+        This action cannot be undone. Your account and all associated data will be permanently removed.
+      </AlertDialog.Description>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action>Yes, delete account</AlertDialog.Action>
+    </AlertDialog.Content>
+  </AlertDialog.Portal>
+</AlertDialog.Root>
+```
+
+## Component structure
+
+```svelte
+<AlertDialog.Root>
+  <AlertDialog.Trigger />
+  <AlertDialog.Portal>
+    <AlertDialog.Overlay />
+    <AlertDialog.Content>
+      <AlertDialog.Title />
+      <AlertDialog.Description />
+      <AlertDialog.Cancel />
+      <AlertDialog.Action />
+    </AlertDialog.Content>
+  </AlertDialog.Portal>
+</AlertDialog.Root>
+```
+
+`AlertDialog.Portal` renders its children outside the normal DOM hierarchy. Always wrap `AlertDialog.Overlay` and `AlertDialog.Content` inside a portal.
+
+## Action vs Cancel
+
+`AlertDialog.Action` confirms the action. `AlertDialog.Cancel` closes the dialog without acting.
+
+<Note>
+  `AlertDialog.Action` does **not** close the dialog automatically. This is intentional: it allows you to wrap it in a `<form>` for server-side submission, or run an async operation before closing the dialog programmatically.
+</Note>
+
+## Managing open state
+
+### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+  let isOpen = $state(false);
+</script>
+
+<button onclick={() => (isOpen = true)}>Open Dialog</button>
+
+<AlertDialog.Root bind:open={isOpen}>
+  <!-- ... -->
+</AlertDialog.Root>
+```
+
+### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+  let myOpen = $state(false);
+
+  function getOpen() {
+    return myOpen;
+  }
+
+  function setOpen(newOpen: boolean) {
+    myOpen = newOpen;
+  }
+</script>
+
+<AlertDialog.Root bind:open={getOpen, setOpen}>
+  <!-- ... -->
+</AlertDialog.Root>
+```
+
+## Focus management
+
+When the dialog opens, focus is set to `AlertDialog.Content` so screen readers announce the content immediately. When it closes, focus returns to the trigger.
+
+### Customizing initial focus
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<AlertDialog.Root>
+  <AlertDialog.Trigger>Open AlertDialog</AlertDialog.Trigger>
+  <AlertDialog.Content
+    onOpenAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <input type="text" bind:this={nameInput} />
+  </AlertDialog.Content>
+</AlertDialog.Root>
+```
+
+### Customizing close focus
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+  let nameInput = $state<HTMLInputElement>();
+</script>
+
+<input type="text" bind:this={nameInput} />
+<AlertDialog.Root>
+  <AlertDialog.Trigger>Open AlertDialog</AlertDialog.Trigger>
+  <AlertDialog.Content
+    onCloseAutoFocus={(e) => {
+      e.preventDefault();
+      nameInput?.focus();
+    }}
+  >
+    <!-- ... -->
+  </AlertDialog.Content>
+</AlertDialog.Root>
+```
+
+### Disabling the focus trap
+
+<Warning>
+  Disabling the focus trap reduces accessibility. Use with caution and provide an alternative focus strategy.
+</Warning>
+
+```svelte
+<AlertDialog.Content trapFocus={false}>
+  <!-- ... -->
+</AlertDialog.Content>
+```
+
+## Scroll lock
+
+By default, body scrolling is disabled when the alert dialog is open. To allow scrolling:
+
+```svelte
+<AlertDialog.Content preventScroll={false}>
+  <!-- ... -->
+</AlertDialog.Content>
+```
+
+## Escape key handling
+
+By default, pressing `Escape` closes the alert dialog. Use `escapeKeydownBehavior` to change this:
+
+- `'close'` (default): Closes immediately.
+- `'ignore'`: Prevents closing.
+- `'defer-otherwise-close'`: Defers to an ancestor Bits UI component, or closes.
+- `'defer-otherwise-ignore'`: Defers to an ancestor Bits UI component, or ignores.
+
+```svelte
+<AlertDialog.Content escapeKeydownBehavior="ignore">
+  <!-- ... -->
+</AlertDialog.Content>
+```
+
+For custom logic:
+
+```svelte
+<AlertDialog.Content
+  onEscapeKeydown={(e) => {
+    e.preventDefault();
+    // custom behavior
+  }}
+>
+  <!-- ... -->
+</AlertDialog.Content>
+```
+
+## Interaction outside
+
+By default, clicking outside the alert dialog does **not** close it (`'ignore'`). This is the key behavioral difference from Dialog. Use `interactOutsideBehavior` to change this:
+
+- `'ignore'` (default): Prevents closing.
+- `'close'`: Closes immediately.
+- `'defer-otherwise-close'`: Defers to an ancestor, or closes.
+- `'defer-otherwise-ignore'`: Defers to an ancestor, or ignores.
+
+```svelte
+<AlertDialog.Content interactOutsideBehavior="close">
+  <!-- ... -->
+</AlertDialog.Content>
+```
+
+## Nested dialogs
+
+Alert Dialogs support nesting alongside regular Dialogs. Each dialog tracks depth and open nested count via data attributes and CSS variables:
+
+**Data attributes:**
+
+- `data-nested-open`: Present when nested dialogs are open inside this one.
+- `data-nested`: Present when this dialog is nested inside another.
+
+**CSS variables:**
+
+- `--bits-dialog-depth`: Nesting depth (0 = root, 1 = first nested, etc.).
+- `--bits-dialog-nested-count`: Number of currently open nested dialogs (reactive).
+
+```svelte
+<AlertDialog.Content
+  style="transform: scale(calc(1 - var(--bits-dialog-nested-count) * 0.05));"
+>
+  <!-- alert dialog content -->
+</AlertDialog.Content>
+```
+
+## Svelte transitions
+
+Use `forceMount` with the `child` snippet to apply Svelte transitions. See the [transitions guide](/transitions) for details.
+
+## Working with forms
+
+### Form submission pattern
+
+`AlertDialog.Action` does not close the dialog automatically, which makes it ideal for wrapping in a form. The Cancel button should have `type="button"` to prevent form submission.
+
+```svelte
+<script lang="ts">
+  import { AlertDialog } from "bits-ui";
+
+  function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  let open = $state(false);
+</script>
+
+<AlertDialog.Root bind:open>
+  <AlertDialog.Portal>
+    <AlertDialog.Overlay />
+    <AlertDialog.Content>
+      <AlertDialog.Title>Confirm your action</AlertDialog.Title>
+      <AlertDialog.Description>Are you sure you want to do this?</AlertDialog.Description>
+      <form
+        method="POST"
+        action="?/someAction"
+        onsubmit={() => {
+          wait(1000).then(() => (open = false));
+        }}
+      >
+        <AlertDialog.Cancel type="button">No, cancel</AlertDialog.Cancel>
+        <AlertDialog.Action type="submit">Yes, confirm</AlertDialog.Action>
+      </form>
+    </AlertDialog.Content>
+  </AlertDialog.Portal>
+</AlertDialog.Root>
+```
+
+### Alert Dialog inside a form
+
+If your AlertDialog is rendered _inside_ a `<form>`, disable or omit `AlertDialog.Portal`. Portalling moves content outside the form element, breaking form submission.
+
+## Reusable component pattern
+
+```svelte title="MyAlertDialog.svelte"
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { AlertDialog, type WithoutChild } from "bits-ui";
+
+  type Props = AlertDialog.RootProps & {
+    buttonText: string;
+    title: Snippet;
+    description: Snippet;
+    contentProps?: WithoutChild<AlertDialog.ContentProps>;
+  };
+
+  let {
+    open = $bindable(false),
+    children,
+    buttonText,
+    contentProps,
+    title,
+    description,
+    ...restProps
+  }: Props = $props();
+</script>
+
+<AlertDialog.Root bind:open {...restProps}>
+  <AlertDialog.Trigger>{buttonText}</AlertDialog.Trigger>
+  <AlertDialog.Portal>
+    <AlertDialog.Overlay />
+    <AlertDialog.Content {...contentProps}>
+      <AlertDialog.Title>{@render title()}</AlertDialog.Title>
+      <AlertDialog.Description>{@render description()}</AlertDialog.Description>
+      {@render children?.()}
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action>Confirm</AlertDialog.Action>
+    </AlertDialog.Content>
+  </AlertDialog.Portal>
+</AlertDialog.Root>
+```
+
+## API reference
+
+### AlertDialog.Root
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `open` | `boolean` | `false` | The open state of the dialog. |
+| `onOpenChange` | `(open: boolean) => void` | — | Called when the open state changes. |
+| `onOpenChangeComplete` | `(open: boolean) => void` | — | Called when the open/close animation completes. |
+
+### AlertDialog.Trigger
+
+Renders a `<button>` that opens the alert dialog. Accepts all standard button attributes.
+
+### AlertDialog.Portal
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `to` | `string \| Element` | `document.body` | Where to portal the content. |
+| `disabled` | `boolean` | `false` | Disable portalling and render inline. |
+
+### AlertDialog.Overlay
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep the overlay mounted when closed. Use with `child` snippet for transitions. |
+
+### AlertDialog.Content
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `forceMount` | `boolean` | `false` | Keep content mounted when closed. Use with `child` snippet for transitions. |
+| `trapFocus` | `boolean` | `true` | Whether to trap focus within the content. |
+| `preventScroll` | `boolean` | `true` | Whether to prevent body scrolling when open. |
+| `escapeKeydownBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'close'` | Behavior when Escape is pressed. |
+| `onEscapeKeydown` | `(e: KeyboardEvent) => void` | — | Custom handler for Escape key press. |
+| `interactOutsideBehavior` | `'close' \| 'ignore' \| 'defer-otherwise-close' \| 'defer-otherwise-ignore'` | `'ignore'` | Behavior when interacting outside content. |
+| `onInteractOutside` | `(e: PointerEvent) => void` | — | Custom handler for outside interactions. |
+| `onOpenAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on open. |
+| `onCloseAutoFocus` | `(e: FocusEvent) => void` | — | Override which element receives focus on close. |
+
+### AlertDialog.Title
+
+Renders the dialog title. Accepts all standard div attributes.
+
+### AlertDialog.Description
+
+Renders the dialog description. Accepts all standard div attributes.
+
+### AlertDialog.Cancel
+
+Renders a `<button>` that closes the alert dialog. Accepts all standard button attributes.
+
+### AlertDialog.Action
+
+Renders a `<button>` that represents the primary action. **Does not close the dialog automatically.** Accepts all standard button attributes.
+
+## Accessibility
+
+- Follows the [WAI-ARIA Alert Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/).
+- `AlertDialog.Content` receives `role="alertdialog"` and `aria-modal="true"`.
+- `AlertDialog.Title` is linked via `aria-labelledby`.
+- `AlertDialog.Description` is linked via `aria-describedby`.
+- Focus is trapped inside the dialog while it is open.
+- Clicking outside the dialog does not close it by default, preventing accidental dismissal.
+- Focus returns to the trigger element when the dialog closes.

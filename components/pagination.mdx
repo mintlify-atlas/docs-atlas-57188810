@@ -1,0 +1,204 @@
+---
+title: "Pagination: Page Navigation Controls with Ellipsis"
+description: Renders a set of page navigation controls — previous, next, numbered pages, and ellipsis — for navigating large lists of items across pages.
+---
+
+The Pagination component generates the full set of page controls for a dataset. Pass the total item count, items per page, and the current page and it returns a computed array of page items and ellipsis placeholders that you render however you like.
+
+## Installation
+
+```typescript
+import { Pagination } from "bits-ui";
+```
+
+## Usage
+
+### Basic pagination
+
+The `pages` snippet prop is an array of `PageItem` objects. Each item has a `type` of either `"page"` (with a numeric `value`) or `"ellipsis"` (a placeholder). Use the `key` field in your `{#each}` block.
+
+```svelte
+<script lang="ts">
+  import { Pagination } from "bits-ui";
+</script>
+
+<Pagination.Root count={100} perPage={10}>
+  {#snippet children({ pages, currentPage })}
+    <Pagination.PrevButton>Previous</Pagination.PrevButton>
+
+    {#each pages as page (page.key)}
+      {#if page.type === "ellipsis"}
+        <span>…</span>
+      {:else}
+        <Pagination.Page {page}>
+          {page.value}
+        </Pagination.Page>
+      {/if}
+    {/each}
+
+    <Pagination.NextButton>Next</Pagination.NextButton>
+  {/snippet}
+</Pagination.Root>
+```
+
+### Managing page state
+
+#### Two-way binding
+
+```svelte
+<script lang="ts">
+  import { Pagination } from "bits-ui";
+
+  let currentPage = $state(1);
+</script>
+
+<button onclick={() => (currentPage = 2)}>Go to page 2</button>
+
+<Pagination.Root count={200} perPage={20} bind:page={currentPage}>
+  {#snippet children({ pages })}
+    <Pagination.PrevButton />
+    {#each pages as page (page.key)}
+      {#if page.type === "ellipsis"}
+        <span>…</span>
+      {:else}
+        <Pagination.Page {page}>{page.value}</Pagination.Page>
+      {/if}
+    {/each}
+    <Pagination.NextButton />
+  {/snippet}
+</Pagination.Root>
+```
+
+#### Fully controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over reads and writes:
+
+```svelte
+<script lang="ts">
+  import { Pagination } from "bits-ui";
+
+  let myPage = $state(1);
+
+  function getPage() {
+    return myPage;
+  }
+
+  function setPage(newPage: number) {
+    myPage = newPage;
+  }
+</script>
+
+<Pagination.Root count={200} perPage={20} bind:page={getPage, setPage}>
+  <!-- ... -->
+</Pagination.Root>
+```
+
+### Controlling visible sibling pages
+
+The `siblingCount` prop controls how many page numbers appear on each side of the current page. Increasing it reduces how often ellipsis items appear.
+
+```svelte
+<!-- Shows up to 2 page numbers on each side of the current page -->
+<Pagination.Root count={200} perPage={10} siblingCount={2}>
+  <!-- ... -->
+</Pagination.Root>
+```
+
+## API Reference
+
+### `Pagination.Root`
+
+The root container. Renders a `<div>` and provides page state and computed page items to child components via both context and a children snippet.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `count` | `number` | — | **Required.** Total number of items in the dataset. |
+| `perPage` | `number` | `1` | Number of items shown per page. |
+| `page` | `number` | `1` | Current active page (1-indexed). Bindable. |
+| `onPageChange` | `(page: number) => void` | — | Called when the page changes. |
+| `siblingCount` | `number` | `1` | Number of page buttons visible on each side of the current page. |
+| `loop` | `boolean` | `false` | Whether keyboard navigation wraps from the last page back to the first, and vice versa. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Determines which arrow keys navigate between page buttons. |
+| `ref` | `HTMLDivElement \| null` | `null` | Bindable reference to the root element. |
+| `children` | `Snippet<[PaginationSnippetProps]>` | — | Receives `{ pages, range, currentPage }`. |
+
+**Snippet props**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `pages` | `PageItem[]` | Array of page and ellipsis items to render. |
+| `range` | `{ start: number; end: number }` | The item index range visible on the current page (1-indexed). |
+| `currentPage` | `number` | The active page number. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-pagination-root` | Present on the root element. |
+
+### `Pagination.Page`
+
+A button for a specific page number. Renders a `<button>` element.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `page` | `Page` | — | **Required.** A `{ type: "page"; value: number }` object from the `pages` array. |
+| `ref` | `HTMLButtonElement \| null` | `null` | Bindable reference to the button element. |
+| `children` | `Snippet` | — | Button label content. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-selected` | Present when this page is the current page. |
+| `data-pagination-page` | Present on the element. |
+
+### `Pagination.PrevButton`
+
+A button that navigates to the previous page. Automatically disabled on the first page. Renders a `<button>`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ref` | `HTMLButtonElement \| null` | `null` | Bindable reference to the button element. |
+| `children` | `Snippet` | — | Button label or icon. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-pagination-prev-button` | Present on the element. |
+
+### `Pagination.NextButton`
+
+A button that navigates to the next page. Automatically disabled on the last page. Renders a `<button>`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ref` | `HTMLButtonElement \| null` | `null` | Bindable reference to the button element. |
+| `children` | `Snippet` | — | Button label or icon. |
+
+**Data attributes**
+
+| Attribute | Values |
+|-----------|--------|
+| `data-pagination-next-button` | Present on the element. |
+
+## Ellipsis items
+
+When `type === "ellipsis"` appears in the `pages` array, render a visual separator (e.g. `…`) in place of a page button. Ellipsis items carry no interaction — they are purely presentational placeholders that indicate skipped page ranges.
+
+```svelte
+{#each pages as page (page.key)}
+  {#if page.type === "ellipsis"}
+    <span aria-hidden="true">…</span>
+  {:else}
+    <Pagination.Page {page}>{page.value}</Pagination.Page>
+  {/if}
+{/each}
+```
+
+## Accessibility
+
+- Wrap the component in a `<nav aria-label="Pagination">` element to give screen reader users a landmark and context.
+- `Pagination.PrevButton` and `Pagination.NextButton` are disabled automatically at the bounds — no manual disabling required.
+- Keyboard users navigate between page buttons using `Tab` (or the configured arrow keys when orientation is set).
